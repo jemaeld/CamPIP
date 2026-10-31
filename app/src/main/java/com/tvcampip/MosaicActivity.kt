@@ -202,7 +202,25 @@ class MosaicActivity : AppCompatActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (event.action == KeyEvent.ACTION_DOWN) showMenuButton()
+        if (event.action == KeyEvent.ACTION_DOWN && !isInPictureInPictureMode) {
+            showMenuButton()
+            val focused = currentFocus
+            when (event.keyCode) {
+                // Al llegar al borde derecho, un "derecha" más selecciona el botón ☰.
+                KeyEvent.KEYCODE_DPAD_RIGHT -> if (focused != null && focused !== topBar) {
+                    val next = focused.focusSearch(View.FOCUS_RIGHT)
+                    if (next == null || next === focused) {
+                        topBar.requestFocus()
+                        return true
+                    }
+                }
+                // Desde el ☰, izquierda o abajo regresan al mosaico.
+                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_DOWN -> if (focused === topBar) {
+                    (pipTile?.view ?: tiles.firstOrNull()?.view)?.requestFocus()
+                    return true
+                }
+            }
+        }
         return super.dispatchKeyEvent(event)
     }
 

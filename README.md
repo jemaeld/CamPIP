@@ -4,7 +4,7 @@ App para Android TV / Chromecast con Google TV que muestra **todas tus cámaras 
 
 ## Cómo funciona
 
-1. Al abrir la app ves el **mosaico** con todas las cámaras activas, a pantalla completa. Arriba a la izquierda hay un botón **☰** que se oculta solo a los 5 s y reaparece al pulsar cualquier tecla; también abre con la tecla **Menú**. Sus opciones: *Enviar a PiP / ventana flotante*, *Gestionar cámaras* y *Salir*. La cuadrícula se adapta sola al número de cámaras (1, 2x1, 2x2, 3x2...).
+1. Al abrir la app ves el **mosaico** con todas las cámaras activas, a pantalla completa. Arriba a la derecha hay un botón **☰** que se oculta solo a los 5 s y reaparece al pulsar cualquier tecla (para seleccionarlo, ve con las flechas al borde derecho y pulsa derecha una vez más); también abre con la tecla **Menú**. Sus opciones: *Enviar a PiP / ventana flotante*, *Gestionar cámaras* y *Salir*. La cuadrícula se adapta sola al número de cámaras (1, 2x1, 2x2, 3x2...).
 2. Muévete con las flechas. **OK** sobre una cámara la marca con ★ PiP: esa es la que quedará flotando al salir. **Mantén OK** para verla a pantalla completa.
 3. Al pulsar **Inicio** (o *Enviar a PiP* en el menú) la app pasa a PiP mostrando solo la cámara elegida; las demás se detienen para ahorrar ancho de banda. En Android 12+ entra sola a PiP al pulsar Inicio.
 4. La **flecha atrás** en el mosaico hace lo mismo que el botón: deja la cámara elegida en PiP (o en ventana flotante) y te lleva al inicio, sin pulsar nada más.
