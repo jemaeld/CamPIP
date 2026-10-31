@@ -7,7 +7,8 @@ App para Android TV / Chromecast con Google TV que muestra **todas tus cámaras 
 1. Al abrir la app ves el **mosaico** con todas las cámaras activas. La cuadrícula se adapta sola al número de cámaras (1, 2x1, 2x2, 3x2...).
 2. Muévete con las flechas. **OK** sobre una cámara la marca con ★ PiP: esa es la que quedará flotando al salir. **Mantén OK** para verla a pantalla completa.
 3. Al pulsar **Inicio** (o el botón **Enviar a PiP**) la app pasa a PiP mostrando solo la cámara elegida; las demás se detienen para ahorrar ancho de banda. En Android 12+ entra sola a PiP al pulsar Inicio.
-4. **Gestionar cámaras** (botón arriba o tecla Menú): agrega, edita y elimina cámaras, y usa la **casilla** de cada una para decidir si aparece en el mosaico.
+4. La **flecha atrás** en el mosaico hace lo mismo que el botón: deja la cámara elegida en PiP (o en ventana flotante) y te lleva al inicio, sin pulsar nada más.
+5. **Gestionar cámaras** (botón arriba o tecla Menú): agrega, edita y elimina cámaras, y usa la **casilla** de cada una para decidir si aparece en el mosaico.
 
 ## Formas de agregar cámaras (en Gestionar cámaras)
 
@@ -93,6 +94,16 @@ Activa las opciones de desarrollador y la depuración USB/de red, y luego:
 adb connect IP_DEL_TV:5555
 adb -s IP_DEL_TV:5555 install -r tvcampip.apk
 ```
+
+## Equipos sin PiP (ventana flotante)
+
+Algunos equipos (varios ONN con Android TV) no traen la función de Picture-in-Picture. Para ellos, *Gestionar cámaras* tiene la casilla **Ventana flotante si el equipo no soporta PiP** (activada por defecto solo en esos equipos):
+
+- Al salir con Inicio, con la flecha atrás o con **Enviar a PiP**, la app abre una **ventana flotante** abajo a la derecha con la cámara elegida, encima de otras apps. Se cierra al volver a la app o con **Cerrar** en la notificación.
+- En esos equipos **siempre se usa el stream secundario (baja resolución)** si la cámara lo tiene, también en pantalla completa.
+- Necesita el permiso **Mostrar sobre otras apps**. Si el TV no tiene esa pantalla: `adb shell appops set com.tvcampip SYSTEM_ALERT_WINDOW allow`
+- Para saber si un equipo soporta PiP: `adb shell pm list features | grep -i picture`. Si no sale `android.software.picture_in_picture`, es una limitación del firmware, no de la app.
+- La ventana flotante no recibe control remoto (no toma el foco); es solo para ver.
 
 ## Permiso de PiP
 

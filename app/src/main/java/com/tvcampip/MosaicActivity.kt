@@ -3,7 +3,6 @@ package com.tvcampip
 import android.app.PictureInPictureParams
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
@@ -16,6 +15,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
@@ -59,8 +59,26 @@ class MosaicActivity : AppCompatActivity() {
         topBar = findViewById(R.id.topBar)
         empty = findViewById(R.id.empty)
 
-        findViewById<Button>(R.id.btnPip).setOnClickListener { enterPip(goHome = true) }
+        findViewById<Button>(R.id.btnPip).setOnClickListener { leaveToBackground(goHome = true) }
         findViewById<Button>(R.id.btnManage).setOnClickListener { openManage() }
+
+        // Flecha atrás: siempre deja la cámara elegida en PiP / ventana flotante, sin pulsar el botón.
+        onBackPressedDispatcher.addCallback(
+            this,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    val noOption = !StreamPolicy.pipSupported(this@MosaicActivity) &&
+                        !StreamPolicy.floatingPreferred(this@MosaicActivity)
+                    if (pipTile == null || isInPictureInPictureMode || noOption) {
+                        // Nada que mostrar flotando: la flecha atrás cierra la app como siempre.
+                        isEnabled = false
+                        onBackPressedDispatcher.onBackPressed()
+                    } else {
+                        leaveToBackground(goHome = true)
+                    }
+                }
+            },
+        )
 
         // Al abrir la app (una vez por proceso) se busca una versión nueva y se pregunta si actualizar.
         if (!updateChecked) {
@@ -77,6 +95,7 @@ class MosaicActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         allowAutoPip = true
+        Floating.stop(this) // al volver a la app se cierra la ventana flotante, como haría el PiP
         updatePipParams()
     }
 
@@ -160,7 +179,7 @@ class MosaicActivity : AppCompatActivity() {
         startActivity(
             Intent(this, PlayerActivity::class.java)
                 .putExtra(PlayerActivity.EXTRA_NAME, tile.camera.name)
-                .putExtra(PlayerActivity.EXTRA_URL, tile.camera.url)
+                .putExtra(PlayerActivity.EXTRA_URL, StreamPolicy.fullUrl(this, tile.camera))
                 .putExtra(PlayerActivity.EXTRA_AUTO_PIP, false),
         )
     }
@@ -199,16 +218,43 @@ class MosaicActivity : AppCompatActivity() {
         }
     }
 
-    private fun enterPip(goHome: Boolean) {
-        if (pipTile == null) {
+    /**
+     * Manda la cámara elegida a PiP o, en equipos sin PiP, a la ventana flotante.
+     * Devuelve true si la app quedó en segundo plano con la cámara visible.
+     */
+    private fun leaveToBackground(goHome: Boolean): Boolean {
+        val tile = pipTile
+        if (tile == null) {
             Toast.makeText(this, "No hay cámaras visibles para enviar a PiP", Toast.LENGTH_LONG).show()
-            return
+            return false
         }
-        if (!packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) {
-            Toast.makeText(this, "Este dispositivo no soporta Picture-in-Picture", Toast.LENGTH_LONG).show()
-            return
+        if (StreamPolicy.pipSupported(this)) return enterPip(goHome)
+        if (!StreamPolicy.floatingPreferred(this)) {
+            Toast.makeText(
+                this,
+                "Este equipo no soporta PiP. Activa «Ventana flotante» en Gestionar cámaras",
+                Toast.LENGTH_LONG,
+            ).show()
+            return false
         }
-        if (isInPictureInPictureMode) return
+        if (!Floating.ensurePermission(this)) return false
+        // En la ventana pequeña siempre se usa el stream ligero.
+        if (!Floating.start(this, tile.camera.name, StreamPolicy.lightUrl(tile.camera))) {
+            Toast.makeText(this, "No se pudo abrir la ventana flotante", Toast.LENGTH_LONG).show()
+            return false
+        }
+        if (goHome) showHomeScreen()
+        return true
+    }
+
+    private fun showHomeScreen() {
+        startActivity(
+            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+    }
+
+    private fun enterPip(goHome: Boolean): Boolean {
+        if (isInPictureInPictureMode) return true
         goHomeAfterPip = goHome
         val ok = try {
             enterPictureInPictureMode(pipParams())
@@ -223,12 +269,16 @@ class MosaicActivity : AppCompatActivity() {
                 Toast.LENGTH_LONG,
             ).show()
         }
+        return ok
     }
 
-    /** Antes de Android 12 hay que entrar a PiP a mano cuando el usuario sale de la app. */
+    /** Al salir con Inicio: PiP a mano antes de Android 12, o ventana flotante si no hay PiP. */
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S && allowAutoPip && pipTile != null) {
+        if (!allowAutoPip || pipTile == null) return
+        if (!StreamPolicy.pipSupported(this)) {
+            if (StreamPolicy.floatingPreferred(this) && Floating.canDraw(this)) leaveToBackground(goHome = false)
+        } else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             enterPip(goHome = false)
         }
     }

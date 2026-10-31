@@ -2,7 +2,6 @@ package com.tvcampip
 
 import android.app.PictureInPictureParams
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
@@ -88,6 +87,7 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        Floating.stop(this)
         if (pendingAutoPip) {
             pendingAutoPip = false
             // Pequeña espera para que la actividad termine de mostrarse antes de entrar a PiP.
@@ -190,9 +190,31 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
+    /** Sin PiP del sistema, usa la ventana flotante (con el stream ligero que ya trae cameraUrl). */
+    private fun enterFloating(goHome: Boolean) {
+        if (!StreamPolicy.floatingPreferred(this)) {
+            Toast.makeText(
+                this,
+                "Este equipo no soporta PiP. Activa «Ventana flotante» en Gestionar cámaras",
+                Toast.LENGTH_LONG,
+            ).show()
+            return
+        }
+        if (!Floating.ensurePermission(this)) return
+        if (!Floating.start(this, cameraName, cameraUrl)) {
+            Toast.makeText(this, "No se pudo abrir la ventana flotante", Toast.LENGTH_LONG).show()
+            return
+        }
+        if (goHome) {
+            startActivity(
+                Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        }
+    }
+
     private fun enterPip(goHome: Boolean) {
-        if (!packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) {
-            Toast.makeText(this, "Este dispositivo no soporta Picture-in-Picture", Toast.LENGTH_LONG).show()
+        if (!StreamPolicy.pipSupported(this)) {
+            enterFloating(goHome)
             return
         }
         if (isInPictureInPictureMode) return
@@ -215,7 +237,10 @@ class PlayerActivity : AppCompatActivity() {
     /** Antes de Android 12 hay que entrar a PiP a mano cuando el usuario sale de la app. */
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S && player != null) {
+        if (player == null) return
+        if (!StreamPolicy.pipSupported(this)) {
+            if (StreamPolicy.floatingPreferred(this) && Floating.canDraw(this)) enterFloating(goHome = false)
+        } else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             enterPip(goHome = false)
         }
     }

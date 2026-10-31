@@ -84,11 +84,35 @@ class ManageActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnUpdate).setOnClickListener { UpdateFlow(this).check(manual = true) }
         findViewById<Button>(R.id.btnExport).setOnClickListener { confirmExport() }
         findViewById<Button>(R.id.btnImport).setOnClickListener { startImport() }
+
+        val floatingCheck = findViewById<CheckBox>(R.id.floatingCheck)
+        floatingCheck.isChecked = StreamPolicy.floatingPreferred(this)
+        floatingCheck.setOnCheckedChangeListener { _, checked ->
+            StreamPolicy.setFloatingPreferred(this, checked)
+            if (checked && !StreamPolicy.pipSupported(this)) Floating.ensurePermission(this)
+            refreshFloatingNote()
+        }
+        refreshFloatingNote()
+    }
+
+    private fun refreshFloatingNote() {
+        val note = findViewById<TextView>(R.id.floatingNote)
+        note.text = when {
+            StreamPolicy.pipSupported(this) ->
+                "Este equipo sí soporta PiP: se usará PiP y esta opción no se aplica."
+            !findViewById<CheckBox>(R.id.floatingCheck).isChecked ->
+                "Este equipo no soporta PiP y la ventana flotante está desactivada."
+            Floating.canDraw(this) ->
+                "Este equipo no soporta PiP: se usará una ventana flotante con el stream de baja resolución."
+            else ->
+                "Falta el permiso «Mostrar sobre otras apps». adb: appops set $packageName SYSTEM_ALERT_WINDOW allow"
+        }
     }
 
     override fun onResume() {
         super.onResume()
         refresh()
+        refreshFloatingNote()
     }
 
     override fun onDestroy() {
@@ -157,7 +181,7 @@ class ManageActivity : AppCompatActivity() {
         startActivity(
             Intent(this, PlayerActivity::class.java)
                 .putExtra(PlayerActivity.EXTRA_NAME, camera.name)
-                .putExtra(PlayerActivity.EXTRA_URL, camera.url)
+                .putExtra(PlayerActivity.EXTRA_URL, StreamPolicy.fullUrl(this, camera))
                 .putExtra(PlayerActivity.EXTRA_AUTO_PIP, false),
         )
     }
