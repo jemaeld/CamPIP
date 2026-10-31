@@ -19,56 +19,38 @@
         android:textSize="18sp"
         android:visibility="gone" />
 
-    <!-- Menú flotante: aparece al pulsar "derecha" después de la última cámara (o con la tecla Menú). -->
+    <!-- Menú flotante compacto y translúcido: aparece al pulsar "derecha" después de la última cámara
+         (o con la tecla Menú). Izquierda o Atrás lo cierran. -->
     <LinearLayout
         android:id="@+id/menuPanel"
-        android:layout_width="300dp"
-        android:layout_height="match_parent"
-        android:layout_gravity="end"
-        android:background="#EE121212"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical|end"
+        android:layout_marginEnd="8dp"
+        android:background="#66000000"
         android:orientation="vertical"
-        android:padding="16dp"
+        android:padding="8dp"
         android:visibility="gone">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Menú"
-            android:textColor="@color/text_primary"
-            android:textSize="24sp"
-            android:textStyle="bold" />
-
-        <Button
-            android:id="@+id/btnMenuPip"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Enviar a PiP" />
-
-        <Button
+        <ImageButton
             android:id="@+id/btnMenuManage"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Gestionar cámaras" />
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:background="@drawable/menu_btn_bg"
+            android:contentDescription="Gestionar cámaras"
+            android:padding="14dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_menu_manage" />
 
-        <Button
+        <ImageButton
             android:id="@+id/btnMenuExit"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Salir" />
-
-        <Button
-            android:id="@+id/btnMenuClose"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Cerrar menú" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Izquierda o Atrás: cerrar el menú\nOK en una cámara: elegirla para PiP\nMantén OK: pantalla completa"
-            android:textColor="@color/text_secondary"
-            android:textSize="13sp" />
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/menu_btn_bg"
+            android:contentDescription="Salir"
+            android:padding="14dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_menu_exit" />
     </LinearLayout>
 </FrameLayout>

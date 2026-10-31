@@ -58,16 +58,11 @@ class MosaicActivity : AppCompatActivity() {
         menuPanel = findViewById(R.id.menuPanel)
         empty = findViewById(R.id.empty)
 
-        findViewById<View>(R.id.btnMenuPip).setOnClickListener {
-            hideMenu()
-            leaveToBackground(goHome = true)
-        }
         findViewById<View>(R.id.btnMenuManage).setOnClickListener {
             hideMenu()
             openManage()
         }
         findViewById<View>(R.id.btnMenuExit).setOnClickListener { exitApp() }
-        findViewById<View>(R.id.btnMenuClose).setOnClickListener { hideMenu() }
 
         // Flecha atrás: siempre deja la cámara elegida en PiP / ventana flotante, sin pulsar el botón.
         onBackPressedDispatcher.addCallback(
@@ -199,10 +194,8 @@ class MosaicActivity : AppCompatActivity() {
 
     private fun showMenu() {
         if (isInPictureInPictureMode) return
-        findViewById<android.widget.Button>(R.id.btnMenuPip).text =
-            if (StreamPolicy.pipSupported(this)) "Enviar a PiP" else "Enviar a ventana flotante"
         menuPanel.visibility = View.VISIBLE
-        findViewById<View>(R.id.btnMenuPip).requestFocus()
+        findViewById<View>(R.id.btnMenuManage).requestFocus()
     }
 
     private fun hideMenu() {
