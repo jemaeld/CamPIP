@@ -15,7 +15,6 @@ import android.view.View
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
@@ -39,7 +38,7 @@ class MosaicActivity : AppCompatActivity() {
 
     private lateinit var store: CameraStore
     private lateinit var mosaic: MosaicLayout
-    private lateinit var topBar: View
+    private lateinit var menuPanel: View
     private lateinit var empty: View
 
     private val tiles = mutableListOf<Tile>()
@@ -56,21 +55,29 @@ class MosaicActivity : AppCompatActivity() {
 
         store = CameraStore(this)
         mosaic = findViewById(R.id.mosaic)
-        topBar = findViewById(R.id.topBar)
+        menuPanel = findViewById(R.id.menuPanel)
         empty = findViewById(R.id.empty)
 
-        topBar.setOnClickListener { showMenu() }
-        topBar.setOnFocusChangeListener { v, focused ->
-            if (focused) showMenuButton()
-            v.animate().scaleX(if (focused) 1.3f else 1f).scaleY(if (focused) 1.3f else 1f).setDuration(120).start()
+        findViewById<View>(R.id.btnMenuPip).setOnClickListener {
+            hideMenu()
+            leaveToBackground(goHome = true)
         }
-        showMenuButton()
+        findViewById<View>(R.id.btnMenuManage).setOnClickListener {
+            hideMenu()
+            openManage()
+        }
+        findViewById<View>(R.id.btnMenuExit).setOnClickListener { exitApp() }
+        findViewById<View>(R.id.btnMenuClose).setOnClickListener { hideMenu() }
 
         // Flecha atrás: siempre deja la cámara elegida en PiP / ventana flotante, sin pulsar el botón.
         onBackPressedDispatcher.addCallback(
             this,
             object : OnBackPressedCallback(true) {
                 override fun handleOnBackPressed() {
+                    if (menuPanel.visibility == View.VISIBLE) {
+                        hideMenu()
+                        return
+                    }
                     val noOption = !StreamPolicy.pipSupported(this@MosaicActivity) &&
                         !StreamPolicy.floatingPreferred(this@MosaicActivity)
                     if (pipTile == null || isInPictureInPictureMode || noOption) {
@@ -99,7 +106,6 @@ class MosaicActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         allowAutoPip = true
-        showMenuButton()
         Floating.stop(this) // al volver a la app se cierra la ventana flotante, como haría el PiP
         updatePipParams()
     }
@@ -189,24 +195,32 @@ class MosaicActivity : AppCompatActivity() {
         )
     }
 
-    // ---------------------------------------------------------------- menú hamburguesa
+    // ---------------------------------------------------------------- menú flotante
 
-    private val hideMenuRunnable = Runnable {
-        if (!topBar.hasFocus()) topBar.animate().alpha(0f).setDuration(300).start()
+    private fun showMenu() {
+        if (isInPictureInPictureMode) return
+        findViewById<android.widget.Button>(R.id.btnMenuPip).text =
+            if (StreamPolicy.pipSupported(this)) "Enviar a PiP" else "Enviar a ventana flotante"
+        menuPanel.visibility = View.VISIBLE
+        findViewById<View>(R.id.btnMenuPip).requestFocus()
     }
 
-    /** Muestra el botón ☰ y lo oculta de nuevo a los 5 segundos sin actividad. */
-    private fun showMenuButton() {
-        if (isInPictureInPictureMode) return
-        topBar.animate().cancel()
-        topBar.alpha = 0.85f
-        handler.removeCallbacks(hideMenuRunnable)
-        handler.postDelayed(hideMenuRunnable, 5000)
+    private fun hideMenu() {
+        menuPanel.visibility = View.GONE
+        (pipTile?.view ?: tiles.firstOrNull()?.view)?.requestFocus()
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN && !isInPictureInPictureMode) {
-            showMenuButton()
+            val menuOpen = menuPanel.visibility == View.VISIBLE
+            if (menuOpen) {
+                // Con el menú abierto, izquierda lo cierra; arriba/abajo/OK los maneja la lista de botones.
+                if (event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+                    hideMenu()
+                    return true
+                }
+                return super.dispatchKeyEvent(event)
+            }
             var focused = currentFocus
             val isNav = event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT || event.keyCode == KeyEvent.KEYCODE_DPAD_UP ||
                 event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT || event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN
@@ -216,53 +230,20 @@ class MosaicActivity : AppCompatActivity() {
                 focused = currentFocus
                 if (focused != null) return true
             }
+            // "Derecha" en una cámara sin otra a su derecha abre el menú flotante.
             val tile = tiles.firstOrNull { it.view === focused }
-            when (event.keyCode) {
-                // Borde derecho (o fila de arriba con "arriba"): un movimiento más selecciona el botón ☰.
-                KeyEvent.KEYCODE_DPAD_RIGHT -> if (tile != null) {
-                    val f = tile.view
-                    val hasRight = tiles.any {
-                        it !== tile && it.view.left >= f.right - 1 && it.view.top < f.bottom && it.view.bottom > f.top
-                    }
-                    if (!hasRight) {
-                        topBar.requestFocus()
-                        return true
-                    }
+            if (event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && tile != null) {
+                val f = tile.view
+                val hasRight = tiles.any {
+                    it !== tile && it.view.left >= f.right - 1 && it.view.top < f.bottom && it.view.bottom > f.top
                 }
-                KeyEvent.KEYCODE_DPAD_UP -> if (tile != null) {
-                    val f = tile.view
-                    val hasAbove = tiles.any {
-                        it !== tile && it.view.bottom <= f.top + 1 && it.view.left < f.right && it.view.right > f.left
-                    }
-                    if (!hasAbove && f.right >= (mosaic.width * 0.5f)) {
-                        topBar.requestFocus()
-                        return true
-                    }
-                }
-                // Desde el ☰, izquierda o abajo regresan al mosaico.
-                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_DOWN -> if (focused === topBar) {
-                    (pipTile?.view ?: tiles.firstOrNull()?.view)?.requestFocus()
+                if (!hasRight) {
+                    showMenu()
                     return true
                 }
             }
         }
         return super.dispatchKeyEvent(event)
-    }
-
-    private fun showMenu() {
-        val pipLabel = if (StreamPolicy.pipSupported(this)) "Enviar a PiP" else "Enviar a ventana flotante"
-        val items = arrayOf(pipLabel, "Gestionar cámaras", "Salir (cierra la app y la ventana)")
-        AlertDialog.Builder(this)
-            .setTitle("Menú")
-            .setItems(items) { _, which ->
-                when (which) {
-                    0 -> leaveToBackground(goHome = true)
-                    1 -> openManage()
-                    2 -> exitApp()
-                }
-            }
-            .setNegativeButton("Cerrar", null)
-            .show()
     }
 
     /** Cierra la app y la ventana flotante sin dejar nada encima (la flecha atrás e Inicio sí las dejan). */
@@ -404,7 +385,7 @@ class MosaicActivity : AppCompatActivity() {
 
     /** En PiP solo se muestra la cámara elegida; las demás se detienen para ahorrar ancho de banda. */
     private fun showPipLayout(on: Boolean) {
-        topBar.visibility = if (on) View.GONE else View.VISIBLE
+        if (on) menuPanel.visibility = View.GONE
         for (t in tiles) {
             // En PiP la cámara elegida usa el stream principal; al volver al mosaico, el secundario.
             if (t === pipTile) switchStream(t, if (on) t.camera.url else (t.camera.gridUrl ?: t.camera.url))
@@ -423,7 +404,6 @@ class MosaicActivity : AppCompatActivity() {
             }
         }
         if (!on) {
-            showMenuButton()
             refreshBadges()
             pipTile?.view?.requestFocus()
         }
