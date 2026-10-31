@@ -60,7 +60,10 @@ class MosaicActivity : AppCompatActivity() {
         empty = findViewById(R.id.empty)
 
         topBar.setOnClickListener { showMenu() }
-        topBar.setOnFocusChangeListener { _, focused -> if (focused) showMenuButton() }
+        topBar.setOnFocusChangeListener { v, focused ->
+            if (focused) showMenuButton()
+            v.animate().scaleX(if (focused) 1.3f else 1f).scaleY(if (focused) 1.3f else 1f).setDuration(120).start()
+        }
         showMenuButton()
 
         // Flecha atrás: siempre deja la cámara elegida en PiP / ventana flotante, sin pulsar el botón.
@@ -204,12 +207,34 @@ class MosaicActivity : AppCompatActivity() {
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN && !isInPictureInPictureMode) {
             showMenuButton()
-            val focused = currentFocus
+            var focused = currentFocus
+            val isNav = event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT || event.keyCode == KeyEvent.KEYCODE_DPAD_UP ||
+                event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT || event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN
+            // Sin foco (el mosaico se acaba de reconstruir): el primer botón de flecha solo lo recupera.
+            if (focused == null && isNav) {
+                (pipTile?.view ?: tiles.firstOrNull()?.view)?.requestFocus()
+                focused = currentFocus
+                if (focused != null) return true
+            }
+            val tile = tiles.firstOrNull { it.view === focused }
             when (event.keyCode) {
-                // Al llegar al borde derecho, un "derecha" más selecciona el botón ☰.
-                KeyEvent.KEYCODE_DPAD_RIGHT -> if (focused != null && focused !== topBar) {
-                    val next = focused.focusSearch(View.FOCUS_RIGHT)
-                    if (next == null || next === focused) {
+                // Borde derecho (o fila de arriba con "arriba"): un movimiento más selecciona el botón ☰.
+                KeyEvent.KEYCODE_DPAD_RIGHT -> if (tile != null) {
+                    val f = tile.view
+                    val hasRight = tiles.any {
+                        it !== tile && it.view.left >= f.right - 1 && it.view.top < f.bottom && it.view.bottom > f.top
+                    }
+                    if (!hasRight) {
+                        topBar.requestFocus()
+                        return true
+                    }
+                }
+                KeyEvent.KEYCODE_DPAD_UP -> if (tile != null) {
+                    val f = tile.view
+                    val hasAbove = tiles.any {
+                        it !== tile && it.view.bottom <= f.top + 1 && it.view.left < f.right && it.view.right > f.left
+                    }
+                    if (!hasAbove && f.right >= (mosaic.width * 0.5f)) {
                         topBar.requestFocus()
                         return true
                     }
