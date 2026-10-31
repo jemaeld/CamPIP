@@ -239,7 +239,7 @@ class PlayerActivity : AppCompatActivity() {
         super.onUserLeaveHint()
         if (player == null) return
         if (!StreamPolicy.pipSupported(this)) {
-            if (StreamPolicy.floatingPreferred(this) && Floating.canDraw(this)) enterFloating(goHome = false)
+            if (StreamPolicy.floatingPreferred(this)) enterFloating(goHome = false)
         } else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             enterPip(goHome = false)
         }

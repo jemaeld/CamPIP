@@ -277,7 +277,7 @@ class MosaicActivity : AppCompatActivity() {
         super.onUserLeaveHint()
         if (!allowAutoPip || pipTile == null) return
         if (!StreamPolicy.pipSupported(this)) {
-            if (StreamPolicy.floatingPreferred(this) && Floating.canDraw(this)) leaveToBackground(goHome = false)
+            if (StreamPolicy.floatingPreferred(this)) leaveToBackground(goHome = false)
         } else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             enterPip(goHome = false)
         }

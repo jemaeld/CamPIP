@@ -38,7 +38,7 @@ class OverlayService : Service() {
         // Un servicio en primer plano debe llamar a startForeground enseguida.
         startForegroundCompat(name)
 
-        if (intent?.action == ACTION_STOP || url.isEmpty() || !Floating.canDraw(this)) {
+        if (intent?.action == ACTION_STOP || url.isEmpty()) {
             removeWindow()
             stopSelf()
             return START_NOT_STICKY
@@ -77,6 +77,11 @@ class OverlayService : Service() {
         try {
             wm.addView(view, params)
         } catch (_: Exception) {
+            android.widget.Toast.makeText(
+                this,
+                "No se pudo mostrar la ventana flotante. Permiso: adb shell appops set $packageName SYSTEM_ALERT_WINDOW allow",
+                android.widget.Toast.LENGTH_LONG,
+            ).show()
             stopSelf()
             return
         }
