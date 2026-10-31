@@ -61,6 +61,12 @@ class MosaicActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.btnPip).setOnClickListener { enterPip(goHome = true) }
         findViewById<Button>(R.id.btnManage).setOnClickListener { openManage() }
+
+        // Al abrir la app (una vez por proceso) se busca una versión nueva y se pregunta si actualizar.
+        if (!updateChecked) {
+            updateChecked = true
+            UpdateFlow(this).check(manual = false)
+        }
     }
 
     override fun onStart() {
@@ -285,5 +291,8 @@ class MosaicActivity : AppCompatActivity() {
 
     companion object {
         const val PREF_PIP_ID = "pip_camera_id"
+
+        @Volatile
+        private var updateChecked = false
     }
 }

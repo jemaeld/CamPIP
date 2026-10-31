@@ -67,6 +67,7 @@ class ManageActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnAdd).setOnClickListener { showEditDialog(null) }
         findViewById<Button>(R.id.btnDiscover).setOnClickListener { startDiscovery() }
         findViewById<Button>(R.id.btnPhone).setOnClickListener { showPhoneDialog() }
+        findViewById<Button>(R.id.btnUpdate).setOnClickListener { UpdateFlow(this).check(manual = true) }
     }
 
     override fun onResume() {

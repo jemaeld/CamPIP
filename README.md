@@ -13,8 +13,8 @@ App para Android TV / Chromecast con Google TV que muestra **todas tus cámaras 
 
 | Botón | Qué hace |
 |---|---|
-| **Buscar cámaras (ONVIF)** | Descubre cámaras en la red (WS-Discovery), pide usuario/contraseña y obtiene solas las URLs RTSP de cada perfil (principal, secundario...). Si no encuentra nada, ofrece consultar por IP o agregar manual. |
-| **Agregar desde el celular** | Levanta un servidor web local y muestra un QR. Desde el celular (misma red) puedes agregar por URL RTSP, agregar por ONVIF (IP + usuario), mostrar/ocultar y eliminar cámaras. El servidor solo vive mientras el diálogo está abierto y exige un token aleatorio incluido en el QR. |
+| **Buscar cámaras** (ONVIF) | Descubre cámaras en la red (WS-Discovery), pide usuario/contraseña y obtiene solas las URLs RTSP de cada perfil (principal, secundario...). Si no encuentra nada, ofrece consultar por IP o agregar manual. |
+| **Desde el celular** | Levanta un servidor web local y muestra un QR. Desde el celular (misma red) puedes agregar por URL RTSP, agregar por ONVIF (IP + usuario), mostrar/ocultar y eliminar cámaras. El servidor solo vive mientras el diálogo está abierto y exige un token aleatorio incluido en el QR. |
 | **Agregar manual** | Escribes nombre y URL RTSP con el control. |
 
 ## Stream principal y secundario
@@ -42,12 +42,23 @@ Reproducir 6 o más streams a la vez exige mucho al decodificador del TV. Usar e
 
 ## Compilar
 
-No necesitas Android Studio: el workflow de GitHub Actions compila el APK en cada push.
-
-1. Ve a la pestaña **Actions** del repo, abre la última ejecución y descarga el artefacto `tvcampip-debug-apk`.
-2. Si creas un tag (`git tag v0.4.0 && git push --tags`) el APK se publica también en **Releases**.
-
+No necesitas Android Studio: el workflow de GitHub Actions compila el APK en cada push a `main`.
 Localmente: `gradle assembleDebug` (JDK 17 y Android SDK).
+
+## Actualizaciones automáticas
+
+Cada push a `main` publica un **Release** con el APK firmado (`tvcampip.apk`, etiqueta `build-N`). Las TV con la app instalada lo detectan al abrirla, muestran **"Hay una actualización"** y, si aceptas, descargan e instalan la nueva versión. También puedes forzar la búsqueda en *Gestionar cámaras → Actualizar app*.
+
+Para que funcione, Android exige que **todas las versiones estén firmadas con la misma llave**. Configuración (una sola vez):
+
+1. En una PC con JDK instalado: `./scripts/generate-keystore.sh`. Imprime 4 valores.
+2. En GitHub: repo → **Settings → Secrets and variables → Actions → New repository secret**, y crea `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS` y `KEY_PASSWORD` con esos valores.
+3. **Guarda el archivo `.jks` y la contraseña** en un lugar seguro. Si se pierden, no se podrá actualizar la app instalada.
+4. Haz un push (o ejecuta el workflow a mano en Actions → *Run workflow*). Si faltan los Secrets, el workflow solo compila un APK debug de respaldo y no publica Release.
+5. Instala el `tvcampip.apk` del primer Release en cada TV. Si ya había una versión debug instalada, **desinstálala primero** (la firma es distinta) y se perderán las cámaras guardadas.
+6. En cada TV, la primera vez que pulses *Actualizar ahora* el sistema pedirá permitir **"Instalar apps desconocidas"** para TV Cam PiP. Actívalo y vuelve a pulsar el botón.
+
+Cada actualización pide confirmación del usuario (Android no permite instalar en silencio sin Play Store). Tras instalar, la app se cierra y hay que abrirla de nuevo.
 
 ## Instalar en el TV / Chromecast
 
@@ -55,7 +66,7 @@ Activa las opciones de desarrollador y la depuración USB/de red, y luego:
 
 ```bash
 adb connect IP_DEL_TV:5555
-adb -s IP_DEL_TV:5555 install -r tvcampip-debug.apk
+adb -s IP_DEL_TV:5555 install -r tvcampip.apk
 ```
 
 ## Permiso de PiP
