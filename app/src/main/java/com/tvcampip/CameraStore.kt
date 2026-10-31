@@ -11,11 +11,15 @@ data class Camera(
     val url: String,
 )
 
-/** Guarda la lista de cámaras como JSON en SharedPreferences. */
+/**
+ * Guarda la lista de cámaras como JSON en SharedPreferences.
+ * Es seguro usarlo desde varios hilos (la app y el servidor web local lo comparten).
+ */
 class CameraStore(context: Context) {
 
     private val prefs = context.getSharedPreferences("cameras", Context.MODE_PRIVATE)
 
+    @Synchronized
     fun load(): MutableList<Camera> {
         val raw = prefs.getString(KEY, null) ?: return mutableListOf()
         val result = mutableListOf<Camera>()
@@ -31,7 +35,30 @@ class CameraStore(context: Context) {
         return result
     }
 
-    fun save(cameras: List<Camera>) {
+    @Synchronized
+    fun add(camera: Camera) {
+        val list = load()
+        list.add(camera)
+        save(list)
+    }
+
+    @Synchronized
+    fun update(camera: Camera) {
+        val list = load()
+        val i = list.indexOfFirst { it.id == camera.id }
+        if (i >= 0) {
+            list[i] = camera
+            save(list)
+        }
+    }
+
+    @Synchronized
+    fun delete(id: String) {
+        val list = load()
+        if (list.removeAll { it.id == id }) save(list)
+    }
+
+    private fun save(cameras: List<Camera>) {
         val arr = JSONArray()
         cameras.forEach {
             arr.put(JSONObject().put("id", it.id).put("name", it.name).put("url", it.url))
