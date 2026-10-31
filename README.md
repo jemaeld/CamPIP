@@ -8,14 +8,14 @@ App para Android TV / Chromecast con Google TV que muestra **todas tus cámaras 
 2. Muévete con las flechas. **OK** sobre una cámara la marca con ★ PiP: esa es la que quedará flotando al salir. **Mantén OK** para verla a pantalla completa.
 3. Al pulsar **Inicio** (o *Enviar a PiP* en el menú) la app pasa a PiP mostrando solo la cámara elegida; las demás se detienen para ahorrar ancho de banda. En Android 12+ entra sola a PiP al pulsar Inicio.
 4. La **flecha atrás** en el mosaico hace lo mismo que el botón: deja la cámara elegida en PiP (o en ventana flotante) y te lleva al inicio, sin pulsar nada más.
-5. **Gestionar cámaras** (botón arriba o tecla Menú): agrega, edita y elimina cámaras, y usa la **casilla** de cada una para decidir si aparece en el mosaico.
+5. **Gestionar cámaras** (botón arriba o tecla Menú): agrega, edita y elimina cámaras (mantén OK sobre una cámara o pulsa Menú para ver *Editar* y *Eliminar*), y usa la **casilla** de cada una para decidir si aparece en el mosaico.
 
 ## Formas de agregar cámaras (en Gestionar cámaras)
 
 | Botón | Qué hace |
 |---|---|
 | **Buscar cámaras** (ONVIF) | Descubre cámaras en la red (WS-Discovery), pide usuario/contraseña y obtiene solas las URLs RTSP de cada perfil (principal, secundario...). Si no encuentra nada, ofrece consultar por IP o agregar manual. |
-| **Desde el celular** | Levanta un servidor web local y muestra un QR. Desde el celular (misma red) puedes agregar por URL RTSP, agregar por ONVIF (IP + usuario), mostrar/ocultar y eliminar cámaras. El servidor solo vive mientras el diálogo está abierto y exige un token aleatorio incluido en el QR. |
+| **Desde el celular** | Levanta un servidor web local y muestra un QR. Desde el celular (misma red) puedes agregar por URL RTSP, agregar por ONVIF (IP + usuario), mostrar/ocultar, **editar** y eliminar cámaras. El servidor solo vive mientras el diálogo está abierto y exige un token aleatorio incluido en el QR. |
 | **Agregar manual** | Escribes nombre y URL RTSP con el control. |
 | **Importar de archivo** | Carga muchas cámaras de golpe desde un archivo `.json` (ver abajo). |
 

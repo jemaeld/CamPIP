@@ -194,6 +194,29 @@ class WebServer(
                 }
             }
 
+            method == "GET" && path == "/edit" -> {
+                val cam = store.load().firstOrNull { it.id == q["id"] }
+                if (cam == null) Resp(200, page("No encontrada", "<p>Esa cámara ya no existe.</p>${backLink()}"))
+                else Resp(200, editPage(cam))
+            }
+
+            method == "POST" && path == "/update" -> {
+                val name = f["name"]?.trim().orEmpty()
+                val url = f["url"]?.trim().orEmpty()
+                val grid = f["grid"]?.trim().orEmpty().ifEmpty { null }
+                val cam = store.load().firstOrNull { it.id == f["id"] }
+                fun isRtsp(u: String) = u.startsWith("rtsp://") || u.startsWith("rtsps://")
+                when {
+                    cam == null -> Resp(200, page("No encontrada", "<p>Esa cámara ya no existe.</p>${backLink()}"))
+                    name.isEmpty() || !isRtsp(url) || (grid != null && !isRtsp(grid)) ->
+                        Resp(200, page("Datos inválidos", "<p>Pon un nombre y URLs que empiecen con <code>rtsp://</code>.</p>${backLink()}"))
+                    else -> {
+                        store.update(cam.copy(name = name, url = url, gridUrl = grid))
+                        Resp(303, location = home("Cámara actualizada: $name"))
+                    }
+                }
+            }
+
             method == "POST" && path == "/delete" -> {
                 f["id"]?.let { store.delete(it) }
                 Resp(303, location = home("Cámara eliminada"))
@@ -272,6 +295,17 @@ class WebServer(
 
     // ---------------------------------------------------------------- HTML
 
+    private fun editPage(c: Camera): String = page(
+        "Editar cámara",
+        """<form method="post" action="/update?k=$token" class="card">
+<input type="hidden" name="k" value="$token">
+<input type="hidden" name="id" value="${esc(c.id)}">
+<input name="name" placeholder="Nombre" value="${esc(c.name)}" required>
+<input name="url" placeholder="URL principal rtsp://..." value="${esc(c.url)}" autocapitalize="none" autocorrect="off" required>
+<input name="grid" placeholder="URL secundaria para el mosaico (opcional)" value="${esc(c.gridUrl ?: "")}" autocapitalize="none" autocorrect="off">
+<button>Guardar cambios</button></form>""" + backLink(),
+    )
+
     private fun backLink() = """<p><a href="${home()}">&larr; Volver</a></p>"""
 
     private fun mask(url: String): String = url.replace(Regex("(://[^:/@]+:)[^@/]*@"), "$1•••@")
@@ -316,6 +350,7 @@ $content
             sb.append(
                 """<div class="row">
 <div><b>${esc(c.name)}</b>$state<br><small>${esc(mask(c.url))}</small>$gridLine</div>
+<a href="/edit?k=$token&id=${esc(c.id)}" style="margin:0"><button type="button">Editar</button></a>
 <form method="post" action="/toggle?k=$token" style="margin:0">
 <input type="hidden" name="k" value="$token">
 <input type="hidden" name="id" value="${esc(c.id)}">
