@@ -101,6 +101,19 @@ class ManageActivity : AppCompatActivity() {
             }
             refreshFloatingNote()
         }
+        val sizeButton = findViewById<Button>(R.id.btnFloatSize)
+        sizeButton.text = "Tamaño: ${StreamPolicy.SIZE_NAMES[StreamPolicy.floatingSize(this)]}"
+        sizeButton.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("Tamaño de la ventana flotante")
+                .setSingleChoiceItems(StreamPolicy.SIZE_NAMES, StreamPolicy.floatingSize(this)) { dialog, which ->
+                    StreamPolicy.setFloatingSize(this, which)
+                    sizeButton.text = "Tamaño: ${StreamPolicy.SIZE_NAMES[which]}"
+                    dialog.dismiss()
+                }
+                .setNegativeButton("Cancelar", null)
+                .show()
+        }
         refreshFloatingNote()
     }
 

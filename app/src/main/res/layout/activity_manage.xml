@@ -25,20 +25,51 @@
         android:textColor="@color/text_secondary"
         android:textSize="14sp" />
 
-    <CheckBox
-        android:id="@+id/floatingCheck"
-        android:layout_width="wrap_content"
+    <!-- Grupo: opciones de la ventana flotante (equipos sin PiP) -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="Ventana flotante si el equipo no soporta PiP"
-        android:textColor="@color/text_primary" />
+        android:background="@drawable/group_bg"
+        android:orientation="vertical"
+        android:padding="10dp">
 
-    <TextView
-        android:id="@+id/floatingNote"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textColor="@color/text_secondary"
-        android:textSize="13sp" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ventana flotante (equipos sin PiP)"
+            android:textColor="@color/text_primary"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <CheckBox
+                android:id="@+id/floatingCheck"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Activar"
+                android:textColor="@color/text_primary" />
+
+            <Button
+                android:id="@+id/btnFloatSize"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:text="Tamaño: Mediana" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/floatingNote"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp" />
+    </LinearLayout>
 
     <ListView
         android:id="@+id/list"

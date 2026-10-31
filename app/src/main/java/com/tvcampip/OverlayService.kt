@@ -67,7 +67,10 @@ class OverlayService : Service() {
         view.findViewById<TextView>(R.id.label).text = name
 
         val metrics = resources.displayMetrics
-        val width = maxOf((metrics.widthPixels * 0.28f).toInt(), (280 * metrics.density).toInt())
+        val width = maxOf(
+            (metrics.widthPixels * StreamPolicy.floatingWidthFraction(this)).toInt(),
+            (240 * metrics.density).toInt(),
+        )
         val height = width * 9 / 16
         val margin = (24 * metrics.density).toInt()
 

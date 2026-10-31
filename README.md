@@ -99,6 +99,7 @@ adb -s IP_DEL_TV:5555 install -r tvcampip.apk
 
 Algunos equipos (varios ONN con Android TV) no traen la función de Picture-in-Picture. Para ellos, *Gestionar cámaras* tiene la casilla **Ventana flotante si el equipo no soporta PiP** (activada por defecto solo en esos equipos):
 
+- El **tamaño** de la ventana se elige junto a la casilla (Pequeña 20 %, Mediana 28 %, Grande 40 % del ancho de pantalla).
 - Al salir con Inicio, con la flecha atrás o con **Enviar a PiP**, la app abre una **ventana flotante** abajo a la derecha con la cámara elegida, encima de otras apps. Se cierra al volver a la app o con **Cerrar** en la notificación.
 - En esos equipos **siempre se usa el stream secundario (baja resolución)** si la cámara lo tiene, también en pantalla completa.
 - Necesita el permiso **Mostrar sobre otras apps**. Si el TV no tiene esa pantalla: `adb shell appops set com.tvcampip SYSTEM_ALERT_WINDOW allow`
