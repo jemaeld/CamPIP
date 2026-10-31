@@ -1,7 +1,9 @@
 package com.tvcampip
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.text.InputType
 import android.view.Gravity
@@ -18,8 +20,10 @@ import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import java.io.File
 
 /** Alta, edición y borrado de cámaras, y casilla para elegir cuáles se ven en el mosaico. */
 class ManageActivity : AppCompatActivity() {
@@ -32,6 +36,16 @@ class ManageActivity : AppCompatActivity() {
     private val adapter = CameraAdapter()
 
     private val settings by lazy { getSharedPreferences("settings", Context.MODE_PRIVATE) }
+
+    // Selector de archivos del sistema (si el TV no tiene uno, se usa la carpeta de la app).
+    private val exportLauncher =
+        registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+            if (uri != null) writeExport(uri)
+        }
+    private val importLauncher =
+        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri != null) readImport(uri)
+        }
 
     private inner class CameraAdapter : BaseAdapter() {
         override fun getCount(): Int = cameras.size
@@ -68,6 +82,8 @@ class ManageActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnDiscover).setOnClickListener { startDiscovery() }
         findViewById<Button>(R.id.btnPhone).setOnClickListener { showPhoneDialog() }
         findViewById<Button>(R.id.btnUpdate).setOnClickListener { UpdateFlow(this).check(manual = true) }
+        findViewById<Button>(R.id.btnExport).setOnClickListener { confirmExport() }
+        findViewById<Button>(R.id.btnImport).setOnClickListener { startImport() }
     }
 
     override fun onResume() {
@@ -376,6 +392,131 @@ class ManageActivity : AppCompatActivity() {
     private fun guessRtspUrl(host: String, user: String, pass: String): String {
         val cred = if (user.isNotEmpty()) "${android.net.Uri.encode(user)}:${android.net.Uri.encode(pass)}@" else ""
         return "rtsp://$cred$host:554/"
+    }
+
+    // ---------------------------------------------------------------- exportar / importar
+
+    /** Carpeta propia de la app, accesible por adb (/sdcard/Android/data/com.tvcampip/files/). */
+    private fun fallbackFile(): File = File(getExternalFilesDir(null) ?: filesDir, CameraTransfer.FILE_NAME)
+
+    private fun confirmExport() {
+        if (cameras.isEmpty()) {
+            toast("No hay cámaras para exportar")
+            return
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Exportar cámaras")
+            .setMessage(
+                "Se guardarán las ${cameras.size} cámaras en un archivo. " +
+                    "Incluye usuario y contraseña de las cámaras en texto plano: guárdalo en un lugar seguro.",
+            )
+            .setPositiveButton("Exportar") { _, _ ->
+                try {
+                    exportLauncher.launch(CameraTransfer.FILE_NAME)
+                } catch (_: ActivityNotFoundException) {
+                    exportToFallback()
+                }
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+    private fun writeExport(uri: Uri) {
+        try {
+            val json = CameraTransfer.export(store.load())
+            contentResolver.openOutputStream(uri)?.use { it.write(json.toByteArray(Charsets.UTF_8)) }
+                ?: throw IllegalStateException("No se pudo abrir el archivo")
+            toast("Cámaras exportadas")
+        } catch (e: Exception) {
+            toast("No se pudo exportar: ${e.message}")
+        }
+    }
+
+    /** Respaldo para TV sin selector de archivos: guarda en la carpeta de la app y avisa la ruta. */
+    private fun exportToFallback() {
+        try {
+            val file = fallbackFile()
+            file.writeText(CameraTransfer.export(store.load()), Charsets.UTF_8)
+            AlertDialog.Builder(this)
+                .setTitle("Cámaras exportadas")
+                .setMessage(
+                    "Este TV no tiene selector de archivos. Se guardó en:\n${file.absolutePath}\n\n" +
+                        "Cópialo a tu PC con:\nadb pull ${file.absolutePath}\n\n" +
+                        "También puedes descargarlo desde el celular con «Desde el celular».",
+                )
+                .setPositiveButton("Aceptar", null)
+                .show()
+        } catch (e: Exception) {
+            toast("No se pudo exportar: ${e.message}")
+        }
+    }
+
+    private fun startImport() {
+        try {
+            // "*/*": algunos administradores de archivos no reconocen .json como application/json.
+            importLauncher.launch(arrayOf("*/*"))
+        } catch (_: ActivityNotFoundException) {
+            importFromFallback()
+        }
+    }
+
+    private fun importFromFallback() {
+        val file = fallbackFile()
+        if (file.isFile) {
+            try {
+                confirmImport(file.readText(Charsets.UTF_8))
+            } catch (e: Exception) {
+                toast("No se pudo leer el archivo: ${e.message}")
+            }
+        } else {
+            AlertDialog.Builder(this)
+                .setTitle("Importar cámaras")
+                .setMessage(
+                    "Este TV no tiene selector de archivos. Copia tu archivo a:\n${file.absolutePath}\n\n" +
+                        "Por ejemplo, desde la PC:\nadb push ${CameraTransfer.FILE_NAME} ${file.absolutePath}\n\n" +
+                        "y vuelve a pulsar Importar. También puedes importar desde el celular con «Desde el celular».",
+                )
+                .setPositiveButton("Aceptar", null)
+                .show()
+        }
+    }
+
+    private fun readImport(uri: Uri) {
+        try {
+            val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                ?: throw IllegalStateException("No se pudo abrir el archivo")
+            if (bytes.size > CameraTransfer.MAX_IMPORT_BYTES) throw IllegalStateException("El archivo es demasiado grande")
+            confirmImport(String(bytes, Charsets.UTF_8))
+        } catch (e: Exception) {
+            toast("No se pudo leer el archivo: ${e.message}")
+        }
+    }
+
+    private fun confirmImport(text: String) {
+        val parsed = try {
+            CameraTransfer.parse(text)
+        } catch (e: IllegalArgumentException) {
+            toast(e.message ?: "Archivo no válido")
+            return
+        }
+        val invalidNote = if (parsed.invalid > 0) " (${parsed.invalid} entradas inválidas se omitirán)" else ""
+        AlertDialog.Builder(this)
+            .setTitle("Importar cámaras")
+            .setMessage(
+                "El archivo trae ${parsed.cameras.size} cámaras$invalidNote.\n\n" +
+                    "«Agregar» conserva las actuales y omite las que ya existen con la misma URL.\n" +
+                    "«Reemplazar» borra las ${cameras.size} cámaras actuales y deja solo las del archivo.",
+            )
+            .setPositiveButton("Agregar") { _, _ -> applyImport(parsed, replace = false) }
+            .setNeutralButton("Reemplazar") { _, _ -> applyImport(parsed, replace = true) }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+    private fun applyImport(parsed: CameraTransfer.Parsed, replace: Boolean) {
+        val (added, skipped) = store.importCameras(parsed.cameras, replace)
+        refresh()
+        toast(CameraTransfer.summary(added, skipped, parsed.invalid))
     }
 
     // ---------------------------------------------------------------- servidor web + QR

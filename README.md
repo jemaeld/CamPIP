@@ -16,6 +16,31 @@ App para Android TV / Chromecast con Google TV que muestra **todas tus cámaras 
 | **Buscar cámaras** (ONVIF) | Descubre cámaras en la red (WS-Discovery), pide usuario/contraseña y obtiene solas las URLs RTSP de cada perfil (principal, secundario...). Si no encuentra nada, ofrece consultar por IP o agregar manual. |
 | **Desde el celular** | Levanta un servidor web local y muestra un QR. Desde el celular (misma red) puedes agregar por URL RTSP, agregar por ONVIF (IP + usuario), mostrar/ocultar y eliminar cámaras. El servidor solo vive mientras el diálogo está abierto y exige un token aleatorio incluido en el QR. |
 | **Agregar manual** | Escribes nombre y URL RTSP con el control. |
+| **Importar de archivo** | Carga muchas cámaras de golpe desde un archivo `.json` (ver abajo). |
+
+## Exportar e importar cámaras
+
+Para no agregar cada cámara a mano en cada TV (o para respaldar la lista):
+
+- **En la app:** *Gestionar cámaras → Exportar a archivo* guarda un `.json` con todas las cámaras (usa el selector de archivos del TV). *Importar de archivo* lo lee y pregunta si **Agregar** a las existentes (omite las que ya tienen la misma URL principal) o **Reemplazar** todas.
+- **En el servidor web** (*Desde el celular*): sección **Exportar e importar** con un enlace para descargar el archivo y un formulario para subir uno (o pegar su contenido), con opción de reemplazar.
+- Si el TV no tiene selector de archivos, la app usa su carpeta `/sdcard/Android/data/com.tvcampip/files/tvcampip-camaras.json` y te indica el comando `adb pull` / `adb push`.
+
+Formato (también se acepta una lista simple `[ {...}, {...} ]`):
+
+```json
+{
+  "app": "TvCamPip",
+  "version": 1,
+  "cameras": [
+    { "name": "Entrada", "url": "rtsp://usuario:clave@192.168.1.50:554/stream1",
+      "gridUrl": "rtsp://usuario:clave@192.168.1.50:554/stream2", "enabled": true }
+  ]
+}
+```
+
+Solo `name` y `url` son obligatorios (`gridUrl` y `enabled` son opcionales). Las entradas inválidas se omiten y se informa cuántas.
+**Ojo:** el archivo contiene usuario y contraseña de las cámaras en texto plano; guárdalo en un lugar seguro y no lo subas al repositorio.
 
 ## Stream principal y secundario
 

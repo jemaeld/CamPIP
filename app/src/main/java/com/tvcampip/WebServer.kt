@@ -64,7 +64,13 @@ class WebServer(
 
     // ---------------------------------------------------------------- HTTP
 
-    private data class Resp(val code: Int, val body: String = "", val location: String? = null)
+    private data class Resp(
+        val code: Int,
+        val body: String = "",
+        val location: String? = null,
+        val contentType: String = "text/html; charset=utf-8",
+        val headers: Map<String, String> = emptyMap(),
+    )
 
     private fun handle(socket: Socket) {
         socket.use {
@@ -83,7 +89,7 @@ class WebServer(
                         contentLength = line.substringAfter(':').trim().toIntOrNull() ?: 0
                     }
                 }
-                val body = if (contentLength in 1..65536) readExactly(input, contentLength) else ByteArray(0)
+                val body = if (contentLength in 1..CameraTransfer.MAX_IMPORT_BYTES) readExactly(input, contentLength) else ByteArray(0)
 
                 val method = parts[0].uppercase()
                 val target = parts[1]
@@ -117,7 +123,8 @@ class WebServer(
             else -> "Error"
         }
         val sb = StringBuilder("HTTP/1.1 ${r.code} $status\r\n")
-        sb.append("Content-Type: text/html; charset=utf-8\r\n")
+        sb.append("Content-Type: ${r.contentType}\r\n")
+        for ((name, value) in r.headers) sb.append("$name: $value\r\n")
         sb.append("Content-Length: ${bytes.size}\r\n")
         sb.append("Cache-Control: no-store\r\n")
         sb.append("Connection: close\r\n")
@@ -190,6 +197,23 @@ class WebServer(
             method == "POST" && path == "/delete" -> {
                 f["id"]?.let { store.delete(it) }
                 Resp(303, location = home("Cámara eliminada"))
+            }
+
+            method == "GET" && path == "/export" -> Resp(
+                200,
+                CameraTransfer.export(store.load()),
+                contentType = "application/json; charset=utf-8",
+                headers = mapOf("Content-Disposition" to "attachment; filename=\"${CameraTransfer.FILE_NAME}\""),
+            )
+
+            method == "POST" && path == "/import" -> {
+                val parsed = try {
+                    CameraTransfer.parse(f["data"].orEmpty())
+                } catch (e: IllegalArgumentException) {
+                    return Resp(200, page("No se pudo importar", "<p>${esc(e.message ?: "Archivo no válido")}</p>${backLink()}"))
+                }
+                val (added, skipped) = store.importCameras(parsed.cameras, replace = f["replace"] == "1")
+                Resp(303, location = home(CameraTransfer.summary(added, skipped, parsed.invalid)))
             }
 
             method == "POST" && path == "/toggle" -> {
@@ -268,6 +292,9 @@ small{color:#9aa;word-break:break-all}
 input{width:100%;box-sizing:border-box;padding:10px;margin:4px 0;border-radius:8px;border:1px solid #444;background:#2a2a2a;color:#fff;font-size:16px}
 button{background:#1e88e5;color:#fff;border:0;border-radius:8px;padding:10px 16px;font-size:16px}
 button.del{background:#c62828}
+input[type=checkbox]{width:auto;margin-right:8px}
+textarea{width:100%;box-sizing:border-box;padding:10px;margin:4px 0;border-radius:8px;border:1px solid #444;background:#2a2a2a;color:#fff;font-size:14px;font-family:monospace}
+label{display:block;margin:8px 0}
 .msg{background:#1b5e20;border-radius:8px;padding:10px;margin:10px 0}
 a{color:#64b5f6} code{background:#2a2a2a;padding:2px 4px;border-radius:4px}
 </style></head><body>
@@ -318,7 +345,27 @@ $content
 <input name="port" placeholder="Puerto ONVIF (80 por defecto)" inputmode="numeric">
 <input name="user" placeholder="Usuario" autocapitalize="none" autocorrect="off">
 <input name="pass" type="password" placeholder="Contraseña">
-<button>Buscar streams</button></form>""",
+<button>Buscar streams</button></form>
+
+<h2>Exportar e importar</h2>
+<p><a href="/export?k=$token">Descargar todas las cámaras (.json)</a><br>
+<small>El archivo incluye usuario y contraseña de las cámaras en texto plano: guárdalo en un lugar seguro.</small></p>
+<form method="post" action="/import?k=$token" class="card">
+<input type="hidden" name="k" value="$token">
+<p><small>Elige el archivo .json o pega su contenido:</small></p>
+<input type="file" id="importFile" accept=".json,application/json,text/plain">
+<textarea name="data" id="importData" rows="6" placeholder="Contenido del archivo..."></textarea>
+<label><input type="checkbox" name="replace" value="1" onchange="if(this.checked&&!confirm('Se borrarán las cámaras actuales y quedarán solo las del archivo. ¿Continuar?'))this.checked=false">Reemplazar todas las cámaras actuales (si no, se agregan a las existentes)</label>
+<button>Importar</button></form>
+<script>
+document.getElementById('importFile').addEventListener('change', function (e) {
+  var f = e.target.files[0];
+  if (!f) return;
+  var r = new FileReader();
+  r.onload = function () { document.getElementById('importData').value = r.result; };
+  r.readAsText(f);
+});
+</script>""",
         )
         return page("TV Cam PiP", sb.toString())
     }

@@ -70,6 +70,30 @@ class CameraStore(context: Context) {
         if (list.removeAll { it.id == id }) save(list)
     }
 
+    /**
+     * Agrega cámaras importadas. Se omiten las que ya existen con la misma URL principal.
+     * Con [replace] = true se borran primero todas las cámaras actuales.
+     * Devuelve (agregadas, omitidas).
+     */
+    @Synchronized
+    fun importCameras(incoming: List<Camera>, replace: Boolean): Pair<Int, Int> {
+        val list = if (replace) mutableListOf<Camera>() else load()
+        val knownUrls = list.map { it.url }.toMutableSet()
+        var added = 0
+        var skipped = 0
+        for (c in incoming) {
+            if (c.url in knownUrls) {
+                skipped++
+            } else {
+                list.add(c)
+                knownUrls.add(c.url)
+                added++
+            }
+        }
+        save(list)
+        return added to skipped
+    }
+
     private fun save(cameras: List<Camera>) {
         val arr = JSONArray()
         cameras.forEach {
