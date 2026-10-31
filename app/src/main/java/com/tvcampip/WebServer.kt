@@ -177,10 +177,12 @@ class WebServer(
             method == "POST" && path == "/add" -> {
                 val name = f["name"]?.trim().orEmpty()
                 val url = f["url"]?.trim().orEmpty()
-                if (name.isEmpty() || !(url.startsWith("rtsp://") || url.startsWith("rtsps://"))) {
-                    Resp(200, page("Datos inválidos", "<p>Pon un nombre y una URL que empiece con <code>rtsp://</code>.</p>${backLink()}"))
+                val grid = f["grid"]?.trim().orEmpty().ifEmpty { null }
+                fun isRtsp(u: String) = u.startsWith("rtsp://") || u.startsWith("rtsps://")
+                if (name.isEmpty() || !isRtsp(url) || (grid != null && !isRtsp(grid))) {
+                    Resp(200, page("Datos inválidos", "<p>Pon un nombre y URLs que empiecen con <code>rtsp://</code>.</p>${backLink()}"))
                 } else {
-                    store.add(Camera(name = name, url = url))
+                    store.add(Camera(name = name, url = url, gridUrl = grid))
                     Resp(303, location = home("Cámara agregada: $name"))
                 }
             }
@@ -226,19 +228,22 @@ class WebServer(
             )
         }
 
-        val items = StringBuilder()
-        for (s in streams) {
-            val fullName = if (streams.size > 1) "$name - ${s.label}" else name
-            items.append(
-                """<form method="post" action="/add?k=$token" class="row">
-<input type="hidden" name="k" value="$token">
-<input type="hidden" name="name" value="${esc(fullName)}">
-<input type="hidden" name="url" value="${esc(s.url)}">
-<div><b>${esc(s.label)}</b><br><small>${esc(mask(s.url))}</small></div>
-<button>Agregar</button></form>""",
-            )
+        val choice = pickMainAndSub(streams)
+        val sub = choice.sub
+        val subText = if (sub != null) {
+            "<b>Secundario (mosaico):</b> ${esc(sub.label)}<br><small>${esc(mask(sub.url))}</small>"
+        } else {
+            "<b>Secundario:</b> no encontrado, el mosaico usará el principal."
         }
-        return Resp(200, page("Streams encontrados", items.toString() + backLink()))
+        val content = """<form method="post" action="/add?k=$token" class="card">
+<input type="hidden" name="k" value="$token">
+<input type="hidden" name="name" value="${esc(name)}">
+<input type="hidden" name="url" value="${esc(choice.main.url)}">
+<input type="hidden" name="grid" value="${esc(sub?.url ?: "")}">
+<p><b>Principal (pantalla completa y PiP):</b> ${esc(choice.main.label)}<br><small>${esc(mask(choice.main.url))}</small></p>
+<p>$subText</p>
+<button>Agregar «${esc(name)}»</button></form>"""
+        return Resp(200, page("Streams encontrados", content + backLink()))
     }
 
     // ---------------------------------------------------------------- HTML
@@ -279,10 +284,11 @@ $content
         if (cams.isEmpty()) sb.append("<p><small>Aún no hay cámaras.</small></p>")
         for (c in cams) {
             val state = if (c.enabled) "" else " <small>(oculta)</small>"
+            val gridLine = c.gridUrl?.let { "<br><small>mosaico: ${esc(mask(it))}</small>" } ?: ""
             val toggleLabel = if (c.enabled) "Ocultar" else "Mostrar"
             sb.append(
                 """<div class="row">
-<div><b>${esc(c.name)}</b>$state<br><small>${esc(mask(c.url))}</small></div>
+<div><b>${esc(c.name)}</b>$state<br><small>${esc(mask(c.url))}</small>$gridLine</div>
 <form method="post" action="/toggle?k=$token" style="margin:0">
 <input type="hidden" name="k" value="$token">
 <input type="hidden" name="id" value="${esc(c.id)}">
@@ -299,7 +305,8 @@ $content
 <form method="post" action="/add?k=$token" class="card">
 <input type="hidden" name="k" value="$token">
 <input name="name" placeholder="Nombre (ej. Entrada)" required>
-<input name="url" placeholder="rtsp://usuario:clave@192.168.1.50:554/stream1" value="rtsp://" autocapitalize="none" autocorrect="off" required>
+<input name="url" placeholder="URL principal rtsp://usuario:clave@192.168.1.50:554/stream1" value="rtsp://" autocapitalize="none" autocorrect="off" required>
+<input name="grid" placeholder="URL secundaria para el mosaico (opcional)" autocapitalize="none" autocorrect="off">
 <button>Agregar</button></form>
 
 <h2>Agregar por ONVIF (IP + usuario)</h2>

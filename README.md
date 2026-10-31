@@ -17,12 +17,18 @@ App para Android TV / Chromecast con Google TV que muestra **todas tus cámaras 
 | **Agregar desde el celular** | Levanta un servidor web local y muestra un QR. Desde el celular (misma red) puedes agregar por URL RTSP, agregar por ONVIF (IP + usuario), mostrar/ocultar y eliminar cámaras. El servidor solo vive mientras el diálogo está abierto y exige un token aleatorio incluido en el QR. |
 | **Agregar manual** | Escribes nombre y URL RTSP con el control. |
 
+## Stream principal y secundario
+
+Cada cámara tiene una **URL principal** (alta resolución) y una **URL secundaria** opcional (baja resolución):
+
+- El **mosaico** usa la secundaria. Si la cámara no tiene secundaria, usa la principal.
+- **Pantalla completa** y **PiP** usan siempre la principal.
+- Con **ONVIF** la app detecta sola cuál es cuál: principal = perfil de mayor resolución, secundario = el de menor resolución. Si hay un solo perfil, las resoluciones son iguales o no se pueden leer, no se asigna secundaria y el mosaico usa el principal. Antes de agregar, te muestra qué eligió.
+- Al agregar o editar manualmente (en el TV o desde el celular) hay un campo opcional "URL secundaria para el mosaico".
+
 ## Rendimiento con varias cámaras
 
-Reproducir 6 o más streams a la vez exige mucho al decodificador del TV. Recomendaciones:
-
-- Usa el **stream secundario** (baja resolución) de las cámaras: el descubrimiento ONVIF lista todos los perfiles y puedes agregar el secundario.
-- Si el hardware se queda sin decodificadores, la app recurre a decodificación por software (más lenta); si ves cortes, reduce resolución o cantidad de cámaras visibles con las casillas.
+Reproducir 6 o más streams a la vez exige mucho al decodificador del TV. Usar el stream secundario lo reduce bastante. Si el hardware se queda sin decodificadores, la app recurre a decodificación por software (más lenta); si ves cortes, baja la resolución del secundario o reduce las cámaras visibles con las casillas.
 
 ## URLs RTSP de ejemplo
 
@@ -39,7 +45,7 @@ Reproducir 6 o más streams a la vez exige mucho al decodificador del TV. Recome
 No necesitas Android Studio: el workflow de GitHub Actions compila el APK en cada push.
 
 1. Ve a la pestaña **Actions** del repo, abre la última ejecución y descarga el artefacto `tvcampip-debug-apk`.
-2. Si creas un tag (`git tag v0.3.0 && git push --tags`) el APK se publica también en **Releases**.
+2. Si creas un tag (`git tag v0.4.0 && git push --tags`) el APK se publica también en **Releases**.
 
 Localmente: `gradle assembleDebug` (JDK 17 y Android SDK).
 
@@ -67,6 +73,5 @@ Si no entra a PiP: **Ajustes > Apps > Acceso especial > Imagen en imagen** y act
 
 ## Pendientes / ideas
 
-- URL secundaria por cámara para el mosaico (sub-stream) y la principal para pantalla completa y PiP.
 - Autenticación HTTP Digest para cámaras ONVIF que la exijan además de WS-Security.
 - Orden manual de los mosaicos, audio activable, tamaño y esquina del PiP.

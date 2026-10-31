@@ -24,7 +24,7 @@ import androidx.media3.ui.PlayerView
 @androidx.annotation.OptIn(UnstableApi::class)
 class CameraPlayer(
     private val context: Context,
-    private val url: String,
+    var url: String,
     private val playerView: PlayerView,
     private val status: TextView,
     private val muted: Boolean = true,

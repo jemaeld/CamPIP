@@ -11,6 +11,8 @@ data class Camera(
     val url: String,
     /** Si está activa, la cámara aparece en el mosaico principal. */
     val enabled: Boolean = true,
+    /** Stream secundario (menor resolución) para el mosaico. Si es null, el mosaico usa [url]. */
+    val gridUrl: String? = null,
 )
 
 /**
@@ -35,6 +37,7 @@ class CameraStore(context: Context) {
                         name = o.getString("name"),
                         url = o.getString("url"),
                         enabled = o.optBoolean("enabled", true), // datos de versiones anteriores no lo traen
+                        gridUrl = if (o.isNull("gridUrl")) null else o.optString("gridUrl").ifBlank { null },
                     ),
                 )
             }
@@ -71,7 +74,8 @@ class CameraStore(context: Context) {
         val arr = JSONArray()
         cameras.forEach {
             arr.put(
-                JSONObject().put("id", it.id).put("name", it.name).put("url", it.url).put("enabled", it.enabled),
+                JSONObject().put("id", it.id).put("name", it.name).put("url", it.url).put("enabled", it.enabled)
+                    .put("gridUrl", it.gridUrl ?: JSONObject.NULL),
             )
         }
         prefs.edit().putString(KEY, arr.toString()).apply()

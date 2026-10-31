@@ -180,12 +180,18 @@ class ManageActivity : AppCompatActivity() {
         val box = verticalBox()
         val nameInput = textInput("Nombre (ej. Entrada)", existing?.name ?: presetName)
         val urlInput = textInput(
-            "rtsp://usuario:clave@192.168.1.50:554/stream1",
+            "URL principal: rtsp://usuario:clave@192.168.1.50:554/stream1",
             existing?.url ?: presetUrl,
+            uri = true,
+        )
+        val gridInput = textInput(
+            "URL secundaria para el mosaico (opcional)",
+            existing?.gridUrl ?: "",
             uri = true,
         )
         box.addView(nameInput)
         box.addView(urlInput)
+        box.addView(gridInput)
 
         AlertDialog.Builder(this)
             .setTitle(if (existing == null) "Agregar cámara" else "Editar cámara")
@@ -193,14 +199,16 @@ class ManageActivity : AppCompatActivity() {
             .setPositiveButton("Guardar") { _, _ ->
                 val name = nameInput.text.toString().trim()
                 val url = urlInput.text.toString().trim()
-                if (name.isEmpty() || !(url.startsWith("rtsp://") || url.startsWith("rtsps://"))) {
-                    toast("Pon un nombre y una URL que empiece con rtsp://")
+                val grid = gridInput.text.toString().trim().ifEmpty { null }
+                fun isRtsp(u: String) = u.startsWith("rtsp://") || u.startsWith("rtsps://")
+                if (name.isEmpty() || !isRtsp(url) || (grid != null && !isRtsp(grid))) {
+                    toast("Pon un nombre y URLs que empiecen con rtsp://")
                     return@setPositiveButton
                 }
                 if (existing == null) {
-                    store.add(Camera(name = name, url = url))
+                    store.add(Camera(name = name, url = url, gridUrl = grid))
                 } else {
-                    store.update(existing.copy(name = name, url = url))
+                    store.update(existing.copy(name = name, url = url, gridUrl = grid))
                 }
                 refresh()
             }
@@ -318,20 +326,21 @@ class ManageActivity : AppCompatActivity() {
     }
 
     private fun showStreams(name: String, streams: List<OnvifClient.Stream>) {
-        val labels = streams.map { it.label }.toTypedArray()
-        val checked = BooleanArray(streams.size) { it == 0 }
+        val choice = pickMainAndSub(streams)
+        val sub = choice.sub
+        val message = "Principal (pantalla completa y PiP):\n${choice.main.label}\n\n" +
+            if (sub != null) {
+                "Secundario (mosaico):\n${sub.label}"
+            } else {
+                "No se encontró un stream secundario: el mosaico usará el principal."
+            }
         AlertDialog.Builder(this)
-            .setTitle("Streams de $name")
-            .setMultiChoiceItems(labels, checked) { _, i, isChecked -> checked[i] = isChecked }
+            .setTitle("Agregar «$name»")
+            .setMessage(message)
             .setPositiveButton("Agregar") { _, _ ->
-                val selected = streams.filterIndexed { i, _ -> checked[i] }
-                if (selected.isEmpty()) return@setPositiveButton
-                selected.forEach { s ->
-                    val camName = if (streams.size > 1) "$name - ${s.label}" else name
-                    store.add(Camera(name = camName, url = s.url))
-                }
+                store.add(Camera(name = name, url = choice.main.url, gridUrl = sub?.url))
                 refresh()
-                toast("Cámaras agregadas: ${selected.size}")
+                toast("Cámara agregada: $name")
             }
             .setNegativeButton("Cancelar", null)
             .show()

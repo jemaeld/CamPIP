@@ -99,7 +99,7 @@ class MosaicActivity : AppCompatActivity() {
             val badge = v.findViewById<TextView>(R.id.badge)
             val cp = CameraPlayer(
                 this,
-                cam.url,
+                cam.gridUrl ?: cam.url, // el mosaico usa el secundario; si no hay, el principal
                 v.findViewById<PlayerView>(R.id.playerView),
                 v.findViewById<TextView>(R.id.status),
             )
@@ -250,10 +250,19 @@ class MosaicActivity : AppCompatActivity() {
         }
     }
 
+    private fun switchStream(tile: Tile, url: String) {
+        if (tile.player.url != url) {
+            tile.player.url = url
+            tile.player.start()
+        }
+    }
+
     /** En PiP solo se muestra la cámara elegida; las demás se detienen para ahorrar ancho de banda. */
     private fun showPipLayout(on: Boolean) {
         topBar.visibility = if (on) View.GONE else View.VISIBLE
         for (t in tiles) {
+            // En PiP la cámara elegida usa el stream principal; al volver al mosaico, el secundario.
+            if (t === pipTile) switchStream(t, if (on) t.camera.url else (t.camera.gridUrl ?: t.camera.url))
             t.view.foreground = if (on) null else ContextCompat.getDrawable(this, R.drawable.tile_focus)
             if (on) {
                 t.label.visibility = View.GONE

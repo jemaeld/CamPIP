@@ -23,7 +23,9 @@ class OnvifClient(
     private val user: String,
     private val pass: String,
 ) {
-    data class Stream(val label: String, val url: String)
+    data class Stream(val label: String, val url: String, val width: Int = 0, val height: Int = 0) {
+        val pixels: Long get() = width.toLong() * height
+    }
 
     private var offsetMs = 0L
 
@@ -106,8 +108,10 @@ class OnvifClient(
             val token = m.groupValues[1]
             val block = m.groupValues[2]
             val name = nameRe.find(block)?.groupValues?.get(1)?.let { unescape(it) }?.ifBlank { null } ?: token
-            val res = resRe.find(block)?.let { "${it.groupValues[1]}x${it.groupValues[2]}" }
-            val label = if (res != null) "$name ($res)" else name
+            val resMatch = resRe.find(block)
+            val w = resMatch?.groupValues?.get(1)?.toIntOrNull() ?: 0
+            val h = resMatch?.groupValues?.get(2)?.toIntOrNull() ?: 0
+            val label = if (w > 0 && h > 0) "$name (${w}x$h)" else name
 
             val body = "<trt:GetStreamUri><trt:StreamSetup><tt:Stream>RTP-Unicast</tt:Stream>" +
                 "<tt:Transport><tt:Protocol>RTSP</tt:Protocol></tt:Transport></trt:StreamSetup>" +
@@ -115,7 +119,7 @@ class OnvifClient(
             try {
                 val resp = soap(mediaUrl, body, auth = true)
                 val uri = uriRe.find(resp)?.groupValues?.get(1)?.let { unescape(it).trim() } ?: continue
-                result.add(Stream(label, withCredentials(uri)))
+                result.add(Stream(label, withCredentials(uri), w, h))
             } catch (e: OnvifException) {
                 if (e.auth) throw e
             } catch (_: Exception) {
@@ -195,4 +199,26 @@ class OnvifClient(
 
     private fun unescape(s: String): String =
         s.replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"").replace("&apos;", "'").replace("&amp;", "&")
+}
+
+/** Resultado de elegir qué stream es el principal y cuál el secundario (puede no haberlo). */
+data class StreamChoice(val main: OnvifClient.Stream, val sub: OnvifClient.Stream?)
+
+/**
+ * Principal = el de mayor resolución. Secundario = el de menor resolución, solo si es
+ * realmente más pequeño que el principal y tiene otra URL. Si no se puede determinar
+ * (un solo perfil, resoluciones iguales o desconocidas) no hay secundario y el mosaico
+ * usará el principal.
+ */
+fun pickMainAndSub(streams: List<OnvifClient.Stream>): StreamChoice {
+    require(streams.isNotEmpty()) { "No hay streams" }
+    if (streams.size == 1) return StreamChoice(streams[0], null)
+
+    val known = streams.filter { it.pixels > 0 }
+    if (known.size < 2) return StreamChoice(known.firstOrNull() ?: streams[0], null)
+
+    val main = known.maxByOrNull { it.pixels }!!
+    val smallest = known.minByOrNull { it.pixels }!!
+    val sub = smallest.takeIf { it.pixels < main.pixels && it.url != main.url }
+    return StreamChoice(main, sub)
 }
