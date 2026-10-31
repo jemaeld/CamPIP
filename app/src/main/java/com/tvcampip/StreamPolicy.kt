@@ -42,6 +42,23 @@ object StreamPolicy {
     /** Fracción del ancho de pantalla que ocupa la ventana flotante. */
     fun floatingWidthFraction(context: Context): Float = SIZE_FRACTIONS[floatingSize(context)]
 
+    // Posición de la ventana flotante como fracción del espacio libre: (0,0) arriba-izquierda, (1,1) abajo-derecha.
+    fun floatingPosX(context: Context): Float = prefs(context).getFloat("floating_pos_x", 1f).coerceIn(0f, 1f)
+
+    fun floatingPosY(context: Context): Float = prefs(context).getFloat("floating_pos_y", 1f).coerceIn(0f, 1f)
+
+    fun setFloatingPos(context: Context, x: Float, y: Float) {
+        prefs(context).edit().putFloat("floating_pos_x", x).putFloat("floating_pos_y", y).apply()
+    }
+
+    fun floatingPosName(context: Context): String {
+        val x = floatingPosX(context)
+        val y = floatingPosY(context)
+        val h = if (x == 0f) "izquierda" else if (x == 1f) "derecha" else null
+        val v = if (y == 0f) "Arriba" else if (y == 1f) "Abajo" else null
+        return if (h != null && v != null) "$v $h" else "Personalizada"
+    }
+
     fun lightUrl(camera: Camera): String = camera.gridUrl ?: camera.url
 
     /** URL para pantalla completa: en equipos sin PiP siempre el stream ligero si existe. */

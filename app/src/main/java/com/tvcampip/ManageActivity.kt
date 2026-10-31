@@ -114,10 +114,31 @@ class ManageActivity : AppCompatActivity() {
                 .setNegativeButton("Cancelar", null)
                 .show()
         }
+        findViewById<Button>(R.id.btnFloatPos).setOnClickListener {
+            val corners = arrayOf(
+                "Arriba izquierda", "Arriba derecha", "Abajo izquierda", "Abajo derecha",
+                "Mover con el control remoto…",
+            )
+            AlertDialog.Builder(this)
+                .setTitle("Posición de la ventana flotante")
+                .setItems(corners) { _, which ->
+                    when (which) {
+                        0 -> StreamPolicy.setFloatingPos(this, 0f, 0f)
+                        1 -> StreamPolicy.setFloatingPos(this, 1f, 0f)
+                        2 -> StreamPolicy.setFloatingPos(this, 0f, 1f)
+                        3 -> StreamPolicy.setFloatingPos(this, 1f, 1f)
+                        else -> startActivity(Intent(this, PositionActivity::class.java))
+                    }
+                    refreshFloatingNote()
+                }
+                .setNegativeButton("Cancelar", null)
+                .show()
+        }
         refreshFloatingNote()
     }
 
     private fun refreshFloatingNote() {
+        findViewById<Button>(R.id.btnFloatPos).text = "Posición: ${StreamPolicy.floatingPosName(this)}"
         val note = findViewById<TextView>(R.id.floatingNote)
         note.text = when {
             StreamPolicy.pipSupported(this) ->

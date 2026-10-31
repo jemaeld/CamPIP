@@ -72,7 +72,10 @@ class OverlayService : Service() {
             (240 * metrics.density).toInt(),
         )
         val height = width * 9 / 16
-        val margin = (24 * metrics.density).toInt()
+        val margin = (16 * metrics.density).toInt()
+        // Espacio libre = pantalla menos la ventana y los márgenes; la posición es una fracción de él.
+        val freeX = (metrics.widthPixels - width - 2 * margin).coerceAtLeast(0)
+        val freeY = (metrics.heightPixels - height - 2 * margin).coerceAtLeast(0)
 
         val type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
         val params = WindowManager.LayoutParams(
@@ -84,9 +87,9 @@ class OverlayService : Service() {
                 WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
             PixelFormat.TRANSLUCENT,
         ).apply {
-            gravity = Gravity.BOTTOM or Gravity.END
-            x = margin
-            y = margin
+            gravity = Gravity.TOP or Gravity.START
+            x = margin + (freeX * StreamPolicy.floatingPosX(this@OverlayService)).toInt()
+            y = margin + (freeY * StreamPolicy.floatingPosY(this@OverlayService)).toInt()
         }
 
         try {

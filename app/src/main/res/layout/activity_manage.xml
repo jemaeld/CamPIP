@@ -61,6 +61,13 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
                 android:text="Tamaño: Mediana" />
+
+            <Button
+                android:id="@+id/btnFloatPos"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="Posición: Abajo derecha" />
         </LinearLayout>
 
         <TextView
