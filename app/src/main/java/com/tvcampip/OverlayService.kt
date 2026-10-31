@@ -31,6 +31,18 @@ class OverlayService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    override fun onCreate() {
+        super.onCreate()
+        instance = this
+    }
+
+    /** Cierra la ventana y el servicio de inmediato (se llama desde la app, en el mismo proceso). */
+    fun shutdown() {
+        removeWindow()
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val name = intent?.getStringExtra(EXTRA_NAME) ?: ""
         val url = intent?.getStringExtra(EXTRA_URL) ?: ""
@@ -110,6 +122,7 @@ class OverlayService : Service() {
     }
 
     override fun onDestroy() {
+        if (instance === this) instance = null
         removeWindow()
         super.onDestroy()
     }
@@ -150,6 +163,9 @@ class OverlayService : Service() {
         const val EXTRA_NAME = "overlay_name"
         const val EXTRA_URL = "overlay_url"
         const val ACTION_STOP = "com.tvcampip.STOP_OVERLAY"
+        @Volatile
+        var instance: OverlayService? = null
+
         private const val CHANNEL = "overlay"
         private const val NOTIF_ID = 42
     }

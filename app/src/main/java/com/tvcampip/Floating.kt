@@ -82,6 +82,10 @@ object Floating {
 
     fun stop(context: Context) {
         try {
+            OverlayService.instance?.shutdown()
+        } catch (_: Exception) {
+        }
+        try {
             context.stopService(Intent(context, OverlayService::class.java))
         } catch (_: Exception) {
         }

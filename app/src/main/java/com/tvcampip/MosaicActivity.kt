@@ -61,6 +61,13 @@ class MosaicActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.btnPip).setOnClickListener { leaveToBackground(goHome = true) }
         findViewById<Button>(R.id.btnManage).setOnClickListener { openManage() }
+        // Cierra la app y la ventana flotante sin dejar nada encima (la flecha atrás y Inicio sí las dejan).
+        findViewById<Button>(R.id.btnExit).setOnClickListener {
+            allowAutoPip = false
+            updatePipParams()
+            Floating.stop(this)
+            finishAndRemoveTask()
+        }
 
         // Flecha atrás: siempre deja la cámara elegida en PiP / ventana flotante, sin pulsar el botón.
         onBackPressedDispatcher.addCallback(

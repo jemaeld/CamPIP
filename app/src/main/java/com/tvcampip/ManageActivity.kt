@@ -89,7 +89,16 @@ class ManageActivity : AppCompatActivity() {
         floatingCheck.isChecked = StreamPolicy.floatingPreferred(this)
         floatingCheck.setOnCheckedChangeListener { _, checked ->
             StreamPolicy.setFloatingPreferred(this, checked)
-            if (checked && !StreamPolicy.pipSupported(this)) Floating.ensurePermission(this)
+            if (checked && !StreamPolicy.pipSupported(this)) {
+                // Android 13+: sin este permiso la notificación de la ventana flotante no se muestra.
+                if (android.os.Build.VERSION.SDK_INT >= 33 &&
+                    checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
+                    android.content.pm.PackageManager.PERMISSION_GRANTED
+                ) {
+                    requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 7)
+                }
+                Floating.ensurePermission(this)
+            }
             refreshFloatingNote()
         }
         refreshFloatingNote()
