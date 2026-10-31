@@ -4,9 +4,9 @@ App para Android TV / Chromecast con Google TV que muestra **todas tus cámaras 
 
 ## Cómo funciona
 
-1. Al abrir la app ves el **mosaico** con todas las cámaras activas. La cuadrícula se adapta sola al número de cámaras (1, 2x1, 2x2, 3x2...).
+1. Al abrir la app ves el **mosaico** con todas las cámaras activas, a pantalla completa. Arriba a la izquierda hay un botón **☰** que se oculta solo a los 5 s y reaparece al pulsar cualquier tecla; también abre con la tecla **Menú**. Sus opciones: *Enviar a PiP / ventana flotante*, *Gestionar cámaras* y *Salir*. La cuadrícula se adapta sola al número de cámaras (1, 2x1, 2x2, 3x2...).
 2. Muévete con las flechas. **OK** sobre una cámara la marca con ★ PiP: esa es la que quedará flotando al salir. **Mantén OK** para verla a pantalla completa.
-3. Al pulsar **Inicio** (o el botón **Enviar a PiP**) la app pasa a PiP mostrando solo la cámara elegida; las demás se detienen para ahorrar ancho de banda. En Android 12+ entra sola a PiP al pulsar Inicio.
+3. Al pulsar **Inicio** (o *Enviar a PiP* en el menú) la app pasa a PiP mostrando solo la cámara elegida; las demás se detienen para ahorrar ancho de banda. En Android 12+ entra sola a PiP al pulsar Inicio.
 4. La **flecha atrás** en el mosaico hace lo mismo que el botón: deja la cámara elegida en PiP (o en ventana flotante) y te lleva al inicio, sin pulsar nada más.
 5. **Gestionar cámaras** (botón arriba o tecla Menú): agrega, edita y elimina cámaras, y usa la **casilla** de cada una para decidir si aparece en el mosaico.
 
@@ -104,6 +104,27 @@ Algunos equipos (varios ONN con Android TV) no traen la función de Picture-in-P
 - Necesita el permiso **Mostrar sobre otras apps**. Si el TV no tiene esa pantalla: `adb shell appops set com.tvcampip SYSTEM_ALERT_WINDOW allow`
 - Para saber si un equipo soporta PiP: `adb shell pm list features | grep -i picture`. Si no sale `android.software.picture_in_picture`, es una limitación del firmware, no de la app.
 - La ventana flotante no recibe control remoto (no toma el foco); es solo para ver.
+- **Cerrarla:** abre la app (se cierra sola) y usa ☰ → **Salir**, que cierra la app y la ventana sin dejar nada encima. Inicio y la flecha atrás la vuelven a abrir a propósito.
+
+### Si la ventana no se cierra o no aparece
+
+Ejecuta estos comandos desde una PC con adb (cambia la IP por la de tu TV):
+
+```bash
+adb connect IP_DEL_TV:5555
+# Dar el permiso "Mostrar sobre otras apps" (si el TV no tiene esa pantalla o no la guarda)
+adb -s IP_DEL_TV:5555 shell appops set com.tvcampip SYSTEM_ALERT_WINDOW allow
+# Permiso de notificaciones (Android 13+), para ver el aviso con el botón Cerrar
+adb -s IP_DEL_TV:5555 shell pm grant com.tvcampip android.permission.POST_NOTIFICATIONS
+# Forzar el cierre de la app (y de la ventana flotante) si se quedó pegada
+adb -s IP_DEL_TV:5555 shell am force-stop com.tvcampip
+# Ver el estado del permiso (debe decir "allow")
+adb -s IP_DEL_TV:5555 shell appops get com.tvcampip SYSTEM_ALERT_WINDOW
+# Registro de errores de la app
+adb -s IP_DEL_TV:5555 logcat -d | grep -i "tvcampip\|OverlayService" | tail -40
+```
+
+`am force-stop` es la salida de emergencia: mata la app y su ventana flotante al instante.
 
 ## Permiso de PiP
 

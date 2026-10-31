@@ -12,10 +12,10 @@ import android.util.Rational
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
-import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
@@ -59,15 +59,9 @@ class MosaicActivity : AppCompatActivity() {
         topBar = findViewById(R.id.topBar)
         empty = findViewById(R.id.empty)
 
-        findViewById<Button>(R.id.btnPip).setOnClickListener { leaveToBackground(goHome = true) }
-        findViewById<Button>(R.id.btnManage).setOnClickListener { openManage() }
-        // Cierra la app y la ventana flotante sin dejar nada encima (la flecha atrás y Inicio sí las dejan).
-        findViewById<Button>(R.id.btnExit).setOnClickListener {
-            allowAutoPip = false
-            updatePipParams()
-            Floating.stop(this)
-            finishAndRemoveTask()
-        }
+        topBar.setOnClickListener { showMenu() }
+        topBar.setOnFocusChangeListener { _, focused -> if (focused) showMenuButton() }
+        showMenuButton()
 
         // Flecha atrás: siempre deja la cámara elegida en PiP / ventana flotante, sin pulsar el botón.
         onBackPressedDispatcher.addCallback(
@@ -102,6 +96,7 @@ class MosaicActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         allowAutoPip = true
+        showMenuButton()
         Floating.stop(this) // al volver a la app se cierra la ventana flotante, como haría el PiP
         updatePipParams()
     }
@@ -191,6 +186,51 @@ class MosaicActivity : AppCompatActivity() {
         )
     }
 
+    // ---------------------------------------------------------------- menú hamburguesa
+
+    private val hideMenuRunnable = Runnable {
+        if (!topBar.hasFocus()) topBar.animate().alpha(0f).setDuration(300).start()
+    }
+
+    /** Muestra el botón ☰ y lo oculta de nuevo a los 5 segundos sin actividad. */
+    private fun showMenuButton() {
+        if (isInPictureInPictureMode) return
+        topBar.animate().cancel()
+        topBar.alpha = 0.85f
+        handler.removeCallbacks(hideMenuRunnable)
+        handler.postDelayed(hideMenuRunnable, 5000)
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN) showMenuButton()
+        return super.dispatchKeyEvent(event)
+    }
+
+    private fun showMenu() {
+        val pipLabel = if (StreamPolicy.pipSupported(this)) "Enviar a PiP" else "Enviar a ventana flotante"
+        val items = arrayOf(pipLabel, "Gestionar cámaras", "Salir (cierra la app y la ventana)")
+        AlertDialog.Builder(this)
+            .setTitle("Menú")
+            .setMessage("OK en una cámara: elegirla para PiP  ·  Mantén OK: pantalla completa")
+            .setItems(items) { _, which ->
+                when (which) {
+                    0 -> leaveToBackground(goHome = true)
+                    1 -> openManage()
+                    2 -> exitApp()
+                }
+            }
+            .setNegativeButton("Cerrar", null)
+            .show()
+    }
+
+    /** Cierra la app y la ventana flotante sin dejar nada encima (la flecha atrás e Inicio sí las dejan). */
+    private fun exitApp() {
+        allowAutoPip = false
+        updatePipParams()
+        Floating.stop(this)
+        finishAndRemoveTask()
+    }
+
     private fun openManage() {
         allowAutoPip = false
         updatePipParams()
@@ -199,7 +239,7 @@ class MosaicActivity : AppCompatActivity() {
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         if (keyCode == KeyEvent.KEYCODE_MENU && !isInPictureInPictureMode) {
-            openManage()
+            showMenu()
             return true
         }
         return super.onKeyDown(keyCode, event)
@@ -341,6 +381,7 @@ class MosaicActivity : AppCompatActivity() {
             }
         }
         if (!on) {
+            showMenuButton()
             refreshBadges()
             pipTile?.view?.requestFocus()
         }

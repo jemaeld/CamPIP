@@ -1,69 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#000000"
-    android:orientation="vertical">
+    android:background="#000000">
 
-    <LinearLayout
+    <com.tvcampip.MosaicLayout
+        android:id="@+id/mosaic"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <TextView
+        android:id="@+id/empty"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:text="No hay cámaras visibles.\nPulsa ☰ (o la tecla Menú) y elige «Gestionar cámaras» para agregarlas o activar su casilla."
+        android:textColor="@color/text_secondary"
+        android:textSize="18sp"
+        android:visibility="gone" />
+
+    <!-- Menú hamburguesa: se oculta solo tras unos segundos y reaparece al pulsar cualquier tecla. -->
+    <Button
         android:id="@+id/topBar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/bg"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingStart="16dp"
-        android:paddingTop="4dp"
-        android:paddingEnd="16dp"
-        android:paddingBottom="4dp">
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="OK: elegir la cámara que quedará en PiP  ·  Mantén OK: pantalla completa  ·  Menú: gestionar"
-            android:textColor="@color/text_secondary"
-            android:textSize="13sp" />
-
-        <Button
-            android:id="@+id/btnPip"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Enviar a PiP" />
-
-        <Button
-            android:id="@+id/btnManage"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:text="Gestionar cámaras" />
-
-        <Button
-            android:id="@+id/btnExit"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:text="Salir" />
-    </LinearLayout>
-
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
-
-        <com.tvcampip.MosaicLayout
-            android:id="@+id/mosaic"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-
-        <TextView
-            android:id="@+id/empty"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:gravity="center"
-            android:text="No hay cámaras visibles.\nUsa «Gestionar cámaras» para agregarlas o activar su casilla."
-            android:textColor="@color/text_secondary"
-            android:textSize="18sp"
-            android:visibility="gone" />
-    </FrameLayout>
-</LinearLayout>
+        android:layout_width="56dp"
+        android:layout_height="48dp"
+        android:layout_gravity="top|start"
+        android:layout_margin="8dp"
+        android:alpha="0.85"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:text="☰"
+        android:textSize="22sp" />
+</FrameLayout>
