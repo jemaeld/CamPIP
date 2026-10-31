@@ -254,7 +254,6 @@ class MosaicActivity : AppCompatActivity() {
         val items = arrayOf(pipLabel, "Gestionar cámaras", "Salir (cierra la app y la ventana)")
         AlertDialog.Builder(this)
             .setTitle("Menú")
-            .setMessage("OK en una cámara: elegirla para PiP  ·  Mantén OK: pantalla completa")
             .setItems(items) { _, which ->
                 when (which) {
                     0 -> leaveToBackground(goHome = true)
