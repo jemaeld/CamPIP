@@ -12,7 +12,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Cámaras"
+        android:text="Gestionar cámaras"
         android:textColor="@color/text_primary"
         android:textSize="32sp"
         android:textStyle="bold" />
@@ -21,25 +21,15 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:text="OK: abrir cámara  ·  Mantén OK o tecla Menú: editar / eliminar"
+        android:text="OK: mostrar u ocultar en el mosaico (casilla)  ·  Mantén OK o tecla Menú: más opciones"
         android:textColor="@color/text_secondary"
         android:textSize="14sp" />
-
-    <CheckBox
-        android:id="@+id/autoPip"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:checked="true"
-        android:text="Enviar a PiP al seleccionar una cámara"
-        android:textColor="@color/text_primary"
-        android:textSize="18sp" />
 
     <ListView
         android:id="@+id/list"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="12dp"
         android:layout_weight="1"
         android:divider="@android:color/transparent"
         android:dividerHeight="4dp"
@@ -51,7 +41,7 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:gravity="center"
-        android:text="Aún no hay cámaras.\nUsa «Agregar cámara» e ingresa la URL RTSP."
+        android:text="Aún no hay cámaras.\nBúscalas con ONVIF, agrégalas desde el celular o escribe su URL RTSP."
         android:textColor="@color/text_secondary"
         android:textSize="18sp"
         android:visibility="gone" />

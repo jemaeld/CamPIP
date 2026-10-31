@@ -6,8 +6,10 @@ import android.os.Bundle
 import android.text.InputType
 import android.view.Gravity
 import android.view.KeyEvent
+import android.view.LayoutInflater
 import android.view.View
-import android.widget.ArrayAdapter
+import android.view.ViewGroup
+import android.widget.BaseAdapter
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
@@ -19,38 +21,44 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 
-class MainActivity : AppCompatActivity() {
+/** Alta, edición y borrado de cámaras, y casilla para elegir cuáles se ven en el mosaico. */
+class ManageActivity : AppCompatActivity() {
 
     private lateinit var store: CameraStore
-    private lateinit var adapter: ArrayAdapter<String>
     private lateinit var list: ListView
     private lateinit var empty: TextView
-    private lateinit var autoPip: CheckBox
     private var cameras = mutableListOf<Camera>()
     private var webServer: WebServer? = null
+    private val adapter = CameraAdapter()
 
     private val settings by lazy { getSharedPreferences("settings", Context.MODE_PRIVATE) }
 
+    private inner class CameraAdapter : BaseAdapter() {
+        override fun getCount(): Int = cameras.size
+        override fun getItem(position: Int): Camera = cameras[position]
+        override fun getItemId(position: Int): Long = position.toLong()
+
+        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+            val v = convertView
+                ?: LayoutInflater.from(this@ManageActivity).inflate(R.layout.item_camera_manage, parent, false)
+            val cam = cameras[position]
+            v.findViewById<CheckBox>(R.id.check).isChecked = cam.enabled
+            val isPip = cam.id == settings.getString(MosaicActivity.PREF_PIP_ID, null)
+            v.findViewById<TextView>(R.id.itemText).text = if (isPip) "${cam.name}   ★ PiP" else cam.name
+            return v
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        setContentView(R.layout.activity_manage)
 
         store = CameraStore(this)
         list = findViewById(R.id.list)
         empty = findViewById(R.id.empty)
-        autoPip = findViewById(R.id.autoPip)
-
-        adapter = ArrayAdapter(this, R.layout.item_camera, R.id.itemText, mutableListOf<String>())
         list.adapter = adapter
 
-        autoPip.isChecked = settings.getBoolean(PREF_AUTO_PIP, true)
-        autoPip.setOnCheckedChangeListener { _, checked ->
-            settings.edit().putBoolean(PREF_AUTO_PIP, checked).apply()
-        }
-
-        list.setOnItemClickListener { _, _, position, _ ->
-            play(cameras[position], autoPip.isChecked)
-        }
+        list.setOnItemClickListener { _, _, position, _ -> toggleEnabled(position) }
         list.setOnItemLongClickListener { _, _, position, _ ->
             showOptions(cameras[position])
             true
@@ -92,8 +100,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun refresh() {
         cameras = store.load()
-        adapter.clear()
-        adapter.addAll(cameras.map { it.name })
         adapter.notifyDataSetChanged()
         val hasCameras = cameras.isNotEmpty()
         list.visibility = if (hasCameras) View.VISIBLE else View.GONE
@@ -101,29 +107,42 @@ class MainActivity : AppCompatActivity() {
         if (hasCameras) list.requestFocus()
     }
 
-    private fun play(camera: Camera, pip: Boolean) {
-        val intent = Intent(this, PlayerActivity::class.java)
-            .putExtra(PlayerActivity.EXTRA_NAME, camera.name)
-            .putExtra(PlayerActivity.EXTRA_URL, camera.url)
-            .putExtra(PlayerActivity.EXTRA_AUTO_PIP, pip)
-        startActivity(intent)
+    private fun toggleEnabled(position: Int) {
+        if (position !in cameras.indices) return
+        val updated = cameras[position].copy(enabled = !cameras[position].enabled)
+        store.update(updated)
+        cameras[position] = updated
+        adapter.notifyDataSetChanged() // sin recargar la lista, para no perder la posición del cursor
     }
 
     // ---------------------------------------------------------------- opciones de una cámara
 
     private fun showOptions(camera: Camera) {
-        val options = arrayOf("Ver en pantalla completa", "Ver en PiP", "Editar", "Eliminar")
+        val options = arrayOf("Ver en pantalla completa", "Usar para PiP", "Editar", "Eliminar")
         AlertDialog.Builder(this)
             .setTitle(camera.name)
             .setItems(options) { _, which ->
                 when (which) {
-                    0 -> play(camera, false)
-                    1 -> play(camera, true)
+                    0 -> play(camera)
+                    1 -> {
+                        settings.edit().putString(MosaicActivity.PREF_PIP_ID, camera.id).apply()
+                        adapter.notifyDataSetChanged()
+                        toast("En PiP quedará: ${camera.name}")
+                    }
                     2 -> showEditDialog(camera)
                     3 -> confirmDelete(camera)
                 }
             }
             .show()
+    }
+
+    private fun play(camera: Camera) {
+        startActivity(
+            Intent(this, PlayerActivity::class.java)
+                .putExtra(PlayerActivity.EXTRA_NAME, camera.name)
+                .putExtra(PlayerActivity.EXTRA_URL, camera.url)
+                .putExtra(PlayerActivity.EXTRA_AUTO_PIP, false),
+        )
     }
 
     private fun confirmDelete(camera: Camera) {
@@ -402,9 +421,5 @@ class MainActivity : AppCompatActivity() {
                 refresh()
             }
             .show()
-    }
-
-    private companion object {
-        const val PREF_AUTO_PIP = "auto_pip"
     }
 }

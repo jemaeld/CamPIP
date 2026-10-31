@@ -190,6 +190,12 @@ class WebServer(
                 Resp(303, location = home("Cámara eliminada"))
             }
 
+            method == "POST" && path == "/toggle" -> {
+                val cam = store.load().firstOrNull { it.id == f["id"] }
+                if (cam != null) store.update(cam.copy(enabled = !cam.enabled))
+                Resp(303, location = home(if (cam?.enabled == true) "Cámara oculta del mosaico" else "Cámara visible en el mosaico"))
+            }
+
             method == "POST" && path == "/onvif" -> onvifLookup(f)
 
             else -> Resp(404, page("No encontrado", "<p>Ruta inválida.</p>${backLink()}"))
@@ -272,12 +278,19 @@ $content
         val cams = store.load()
         if (cams.isEmpty()) sb.append("<p><small>Aún no hay cámaras.</small></p>")
         for (c in cams) {
+            val state = if (c.enabled) "" else " <small>(oculta)</small>"
+            val toggleLabel = if (c.enabled) "Ocultar" else "Mostrar"
             sb.append(
-                """<form method="post" action="/delete?k=$token" class="row" onsubmit="return confirm('¿Eliminar esta cámara?')">
+                """<div class="row">
+<div><b>${esc(c.name)}</b>$state<br><small>${esc(mask(c.url))}</small></div>
+<form method="post" action="/toggle?k=$token" style="margin:0">
 <input type="hidden" name="k" value="$token">
 <input type="hidden" name="id" value="${esc(c.id)}">
-<div><b>${esc(c.name)}</b><br><small>${esc(mask(c.url))}</small></div>
-<button class="del">Eliminar</button></form>""",
+<button>$toggleLabel</button></form>
+<form method="post" action="/delete?k=$token" style="margin:0" onsubmit="return confirm('¿Eliminar esta cámara?')">
+<input type="hidden" name="k" value="$token">
+<input type="hidden" name="id" value="${esc(c.id)}">
+<button class="del">Eliminar</button></form></div>""",
             )
         }
 
